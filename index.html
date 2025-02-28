@@ -1,100 +1,205 @@
-<!DOCTYPE html>
-<html>
+DOCTYPE html>
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <title>Options Liquidity & PnL Tool</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.1.0"></script>
     <style>
       body {
-        font-family: Arial, sans-serif;
-        margin: 20px;
+        background-color: #000;
+        color: #fff;
       }
-      table {
-        border-collapse: collapse;
-        width: 100%;
-        margin-top: 10px;
+      .navbar {
+        background-color: #000;
       }
-      th, td {
-        border: 1px solid #ccc;
-        padding: 8px;
-        text-align: center;
+      .navbar-brand {
+        color: #ffcc00 !important;
+        font-weight: bold;
       }
-      input, select, button {
-        margin: 5px;
+      .card {
+        background-color: #1a1a1a;
+        border: none;
+        margin-bottom: 1rem;
       }
-      #chartContainer {
-        margin-top: 20px;
+      .card-header {
+        background-color: #000;
+        color: #ffcc00;
       }
-      details table {
+      .card-body {
+        background-color: #1a1a1a;
+        color: #fff;
+      }
+      .form-select,
+      .form-control {
+        background-color: #333;
+        color: #fff;
+        border: 1px solid #444;
+      }
+      button.btn-primary {
+        background-color: #ffcc00;
+        border-color: #ffcc00;
+        color: #000;
+      }
+      button.btn-secondary {
+        background-color: #444;
+        border-color: #444;
+        color: #fff;
+      }
+      #chartCanvas {
+        background-color: #000;
+        border: 1px solid #444;
+        padding: 10px;
+      }
+      table#liquidityTable th {
+        background-color: #000 !important;
+        color: #ffcc00 !important;
+        border: 1px solid #444 !important;
+        padding: 8px !important;
+      }
+      table#liquidityTable td {
+        background-color: #1a1a1a !important;
+        color: #fff !important;
+        border: 1px solid #444 !important;
+        padding: 8px !important;
+      }
+      /* Force the td containing <details> to remain dark */
+      table#liquidityTable td:nth-child(5) {
+        background-color: #1a1a1a !important;
+        position: relative;
+      }
+      /* Force the details element itself to be dark */
+      table#liquidityTable td:nth-child(5) details {
+        background-color: #1a1a1a !important;
+        display: block;
+        border: none;
+        margin: 0;
+        padding: 0;
+      }
+      table#liquidityTable td:nth-child(5) details summary {
+        cursor: pointer;
+        color: #ffcc00;
+        background-color: #333;
+        padding: 6px 12px;
+        border: 1px solid #444;
+        border-radius: 4px;
+        margin: 0;
+        outline: none;
+        display: inline-block;
+      }
+      table#liquidityTable td:nth-child(5) details summary:hover {
+        background-color: #444;
+      }
+      table#liquidityTable td:nth-child(5) details summary::-webkit-details-marker {
+        display: none;
+      }
+      table#liquidityTable td:nth-child(5) details summary::marker {
+        content: none;
+      }
+      table#liquidityTable td:nth-child(5) details[open] summary {
+        background-color: #444 !important;
+      }
+      table#liquidityTable td:nth-child(5) details table {
         margin-top: 5px;
         width: 100%;
         border-collapse: collapse;
+        background-color: #1a1a1a;
+        color: #fff;
       }
-      details table, details th, details td {
-        border: 1px solid #aaa;
+      table#liquidityTable td:nth-child(5) details table th,
+      table#liquidityTable td:nth-child(5) details table td {
+        background-color: #1a1a1a !important;
+        color: #fff !important;
+        border: 1px solid #444 !important;
+        padding: 8px;
+        text-align: center;
       }
     </style>
   </head>
   <body>
-    <h1>Options Liquidity & PnL Tool</h1>
-    <div>
-      <label for="marketSelect">Market:</label>
-      <select id="marketSelect">
-        <option value="S">S</option>
-        <option value="ETH">ETH</option>
-      </select>
+    <nav class="navbar navbar-expand-lg mb-4">
+      <div class="container">
+        <a class="navbar-brand" href="#">Options Liquidity & PnL Tool</a>
+      </div>
+    </nav>
+    <div class="container">
+      <div class="card mb-4">
+        <div class="card-header d-flex align-items-center">
+          <h4 class="mb-0">Configure Your Trade</h4>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-2">
+              <label for="marketSelect" class="form-label">Market</label>
+              <select id="marketSelect" class="form-select">
+                <option value="S">S</option>
+                <option value="ETH">ETH</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label for="expirySelect" class="form-label">Expiry</label>
+              <select id="expirySelect" class="form-select">
+                <option value="3600">1h</option>
+                <option value="7200">2h</option>
+                <option value="21600">6h</option>
+                <option value="43200">12h</option>
+                <option value="86400">24h</option>
+                <option value="604800">1 week</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label for="optionType" class="form-label">Option Type</label>
+              <select id="optionType" class="form-select">
+                <option value="call">Call</option>
+                <option value="put">Put</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label for="strikeInput" class="form-label">Strike Price</label>
+              <input type="number" id="strikeInput" class="form-control" step="0.0001" value="0.72" />
+            </div>
+            <div class="col-md-3">
+              <label for="tradeAmount" class="form-label">Amount</label>
+              <input type="number" id="tradeAmount" class="form-control" step="any" value="100" />
+            </div>
+            <div class="col-12">
+              <button id="submitBtn" class="btn btn-primary">Submit</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h4 class="mb-0">Exposure Overview</h4>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table id="liquidityTable" class="table table-striped"></table>
+          </div>
+        </div>
+      </div>
+      <div class="card mb-5">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h4 id="chartTitle" class="mb-0">PnL Chart</h4>
+          <button id="toggleChartBtn" class="btn btn-secondary" style="display:none;">Show Liquidity Chart</button>
+        </div>
+        <div class="card-body">
+          <canvas id="chartCanvas" width="600" height="400"></canvas>
+        </div>
+      </div>
     </div>
-    <div>
-      <label for="expirySelect">Expiry:</label>
-      <select id="expirySelect">
-        <option value="3600">1h</option>
-        <option value="7200">2h</option>
-        <option value="21600">6h</option>
-        <option value="43200">12h</option>
-        <option value="86400">24h</option>
-        <option value="604800">1 week</option>
-      </select>
-    </div>
-    <div>
-      <label for="optionType">Option Type:</label>
-      <select id="optionType">
-        <option value="call">Call</option>
-        <option value="put">Put</option>
-      </select>
-    </div>
-    <div>
-      <label for="strikeInput">Strike Price:</label>
-      <input type="number" id="strikeInput" step="0.0001" value="0.72" />
-    </div>
-    <div>
-      <label for="tradeAmount">Amount:</label>
-      <input type="number" id="tradeAmount" step="any" value="100" />
-    </div>
-    <button id="submitBtn">Submit</button>
-    <button id="toggleChartBtn" style="display:none;">Show Liquidity Chart</button>
-    
-    <h2>Exposure Overview</h2>
-    <table id="liquidityTable">
-    </table>
-    
-    <div id="chartContainer">
-      <h2 id="chartTitle">PnL Chart</h2>
-      <canvas id="chartCanvas" width="600" height="400"></canvas>
-    </div>
-    
     <script>
-      let filteredTicks = []; 
-      let chosenTicks = [];   
-      let totalPremium = 0;  
+      let filteredTicks = [];
+      let chosenTicks = [];
+      let totalPremium = 0;
       let underlyingPrices = [];
-      let payoffCurve = []; 
-      let currentChartType = "PnL"; 
-      let myChart = null;      
-      let globalOptionType = "";  
-      let exposureFilledStrikeGlobal = 0; 
-      let spotPriceGlobal = 0;   
-      
+      let payoffCurve = [];
+      let currentChartType = "PnL";
+      let myChart = null;
+      let globalOptionType = "";
+      let exposureFilledStrikeGlobal = 0;
+      let spotPriceGlobal = 0;
       const marketConfig = {
         "S": {
           optionMarket: "0x342e4068bA07bbCcBDDE503b2451FAa3D3C0278B",
@@ -105,16 +210,13 @@
           spotApi: "https://api.stryke.xyz/uniswap-prices/mark-price?chainId=146&ticker=WETH/USDC.e"
         }
       };
-      
       const intradayHook = "0x78d96C07B16d8f911c4cD14EE10601921E4fb8aF";
       const weeklyHook = "0xf6314300b42B7D88c153348921a95d3CA95E74Bd";
-      
       function destroyChart() {
         if (myChart instanceof Chart) {
           myChart.destroy();
         }
       }
-      
       async function fetchSpotPrice(market) {
         const url = marketConfig[market].spotApi;
         try {
@@ -126,7 +228,6 @@
           return 0;
         }
       }
-      
       function renderPnLChart() {
         let breakeven = null;
         for (let i = 1; i < payoffCurve.length; i++) {
@@ -139,7 +240,7 @@
               breakeven = x1 + ((totalPremium - y1) * (x2 - x1)) / (y2 - y1);
               break;
             }
-          } else { 
+          } else {
             if (payoffCurve[i - 1] > totalPremium && payoffCurve[i] <= totalPremium) {
               const x1 = underlyingPrices[i - 1];
               const y1 = payoffCurve[i - 1];
@@ -153,7 +254,6 @@
         if (breakeven === null) {
           breakeven = underlyingPrices[underlyingPrices.length - 1];
         }
-        
         const ctx = document.getElementById('chartCanvas').getContext('2d');
         destroyChart();
         myChart = new Chart(ctx, {
@@ -163,7 +263,7 @@
             datasets: [{
               label: 'Cumulative Payoff',
               data: payoffCurve,
-              borderColor: 'blue',
+              borderColor: "#ffcc00",
               fill: false,
               tension: 0.2
             }]
@@ -173,18 +273,22 @@
               x: {
                 type: 'linear',
                 position: 'bottom',
-                title: { display: true, text: 'Underlying Price' },
+                title: { display: true, text: 'Underlying Price', color: "#ffcc00" },
                 min: underlyingPrices[0],
                 max: underlyingPrices[underlyingPrices.length - 1],
                 ticks: {
+                  color: "#fff",
                   callback: function(value) {
                     return value.toFixed(4);
                   }
-                }
+                },
+                grid: { color: "rgba(255,255,255,0.2)" }
               },
               y: {
                 beginAtZero: true,
-                title: { display: true, text: 'Cumulative Payoff' }
+                title: { display: true, text: 'Cumulative Payoff', color: "#ffcc00" },
+                ticks: { color: "#fff" },
+                grid: { color: "rgba(255,255,255,0.2)" }
               }
             },
             plugins: {
@@ -194,16 +298,11 @@
                     const x = context.parsed.x;
                     let exposure = 0;
                     if (globalOptionType === 'call') {
-                      chosenTicks.forEach(tick => {
-                        if (tick.strike <= x) exposure += tick.usedLiquidity;
-                      });
+                      chosenTicks.forEach(tick => { if (tick.strike <= x) exposure += tick.usedLiquidity; });
                     } else {
-                      chosenTicks.forEach(tick => {
-                        if (tick.strike >= x) exposure += tick.usedLiquidity;
-                      });
+                      chosenTicks.forEach(tick => { if (tick.strike >= x) exposure += tick.usedLiquidity; });
                     }
-                    return context.dataset.label + ': ' + context.parsed.y.toFixed(4) +
-                           ' (Exposure: ' + exposure + ')';
+                    return context.dataset.label + ': ' + context.parsed.y.toFixed(4) + ' (Exposure: ' + exposure + ')';
                   }
                 }
               },
@@ -216,10 +315,7 @@
                     value: totalPremium,
                     borderColor: 'green',
                     borderWidth: 2,
-                    label: {
-                      enabled: true,
-                      content: 'Total Premium'
-                    }
+                    label: { enabled: true, content: 'Total Premium', color: "#fff" }
                   },
                   breakevenLine: {
                     type: 'line',
@@ -228,10 +324,7 @@
                     value: breakeven,
                     borderColor: 'red',
                     borderWidth: 2,
-                    label: {
-                      enabled: true,
-                      content: 'Breakeven'
-                    }
+                    label: { enabled: true, content: 'Breakeven', color: "#fff" }
                   },
                   exposureLine: {
                     type: 'line',
@@ -240,10 +333,7 @@
                     value: exposureFilledStrikeGlobal,
                     borderColor: 'orange',
                     borderWidth: 2,
-                    label: {
-                      enabled: true,
-                      content: 'Exposure Filled'
-                    }
+                    label: { enabled: true, content: 'Exposure Filled', color: "#fff" }
                   }
                 }
               }
@@ -252,13 +342,11 @@
         });
         document.getElementById('chartTitle').innerText = "PnL Chart";
       }
-      
       function renderLiquidityChart() {
         const labels = chosenTicks.map(tick => tick.strike.toFixed(4));
         const usedData = chosenTicks.map(tick => tick.usedLiquidity);
         const remainingData = chosenTicks.map(tick => tick.totalLiquidity - tick.usedLiquidity);
-        const usedColors = chosenTicks.map(() => 'rgba(54, 162, 235, 0.8)');
-        
+        const usedColors = chosenTicks.map(() => '#ffcc00');
         const ctx = document.getElementById('chartCanvas').getContext('2d');
         destroyChart();
         myChart = new Chart(ctx, {
@@ -266,16 +354,8 @@
           data: {
             labels: labels,
             datasets: [
-              {
-                label: 'Used Liquidity',
-                data: usedData,
-                backgroundColor: usedColors
-              },
-              {
-                label: 'Remaining Liquidity',
-                data: remainingData,
-                backgroundColor: 'rgba(201, 203, 207, 0.8)'
-              }
+              { label: 'Used Liquidity', data: usedData, backgroundColor: usedColors },
+              { label: 'Remaining Liquidity', data: remainingData, backgroundColor: 'rgba(128,128,128,0.8)' }
             ]
           },
           options: {
@@ -283,18 +363,29 @@
             plugins: {
               title: {
                 display: true,
-                text: 'Liquidity Breakdown by Chosen Tick'
+                text: 'Liquidity Breakdown by Chosen Tick',
+                color: "#ffcc00"
               }
             },
             scales: {
-              x: { stacked: true, title: { display: true, text: 'Tick Strike' } },
-              y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Liquidity' } }
+              x: {
+                stacked: true,
+                title: { display: true, text: 'Tick Strike', color: "#ffcc00" },
+                ticks: { color: "#fff" },
+                grid: { color: "rgba(255,255,255,0.2)" }
+              },
+              y: {
+                stacked: true,
+                beginAtZero: true,
+                title: { display: true, text: 'Liquidity', color: "#ffcc00" },
+                ticks: { color: "#fff" },
+                grid: { color: "rgba(255,255,255,0.2)" }
+              }
             }
           }
         });
         document.getElementById('chartTitle').innerText = "Purchase Distribution";
       }
-      
       document.getElementById('toggleChartBtn').addEventListener('click', function() {
         if (currentChartType === "PnL") {
           currentChartType = "Liquidity";
@@ -306,7 +397,6 @@
           renderPnLChart();
         }
       });
-      
       document.getElementById('submitBtn').addEventListener('click', async function() {
         const marketChoice = document.getElementById('marketSelect').value;
         const ttlSeconds = parseInt(document.getElementById('expirySelect').value);
@@ -315,17 +405,12 @@
         const strikeInput = parseFloat(document.getElementById('strikeInput').value);
         const tradeAmount = parseFloat(document.getElementById('tradeAmount').value);
         const userAddress = "0xf8859BAae87Eac4C7EE0b81499eDDD99c778FBEB";
-        
         const optionMarket = marketConfig[marketChoice].optionMarket;
-        
         spotPriceGlobal = await fetchSpotPrice(marketChoice);
-        console.log("Spot Price:", spotPriceGlobal);
-        
         const liquidityUrl = `https://api.stryke.xyz/clamm/strikes-chain?chainId=146&optionMarket=${optionMarket}&callsReach=800&putsReach=800&filterDeprecated=true`;
         try {
           const liquidityResponse = await fetch(liquidityUrl);
           const liquidityData = await liquidityResponse.json();
-          
           let allTicks = [];
           liquidityData.forEach(item => {
             for (let key in item) {
@@ -335,7 +420,6 @@
               const rawTotal = parseFloat(data.meta.totalTokenLiquidity);
               const scaledAvail = rawAvail / Math.pow(10, decimals);
               const scaledTotal = rawTotal / Math.pow(10, decimals);
-  
               allTicks.push({
                 strike: parseFloat(key),
                 availableLiquidity: scaledAvail,
@@ -345,14 +429,12 @@
               });
             }
           });
-          
           let allowedHooks = [];
           if (ttlSeconds < 604800) {
             allowedHooks = [intradayHook.toLowerCase(), weeklyHook.toLowerCase()];
           } else {
             allowedHooks = [weeklyHook.toLowerCase()];
           }
-          
           if (optionType === 'call') {
             if (marketChoice === "ETH") {
               filteredTicks = allTicks.filter(tick =>
@@ -376,7 +458,6 @@
             );
             filteredTicks.sort((a, b) => b.strike - a.strike);
           }
-          
           chosenTicks = [];
           let cumulative = 0;
           for (let i = 0; i < filteredTicks.length; i++) {
@@ -392,53 +473,41 @@
             }
             chosenTicks.push(tick);
           }
-          
           if (chosenTicks.length === 0) {
             alert("No sufficient liquidity available for the given trade amount at this strike.");
             return;
           }
-          
           exposureFilledStrikeGlobal = chosenTicks[chosenTicks.length - 1].strike;
-          
           const premiumPromises = chosenTicks.map(tick => {
             const tickQuoteUrl = `https://api.stryke.xyz/clamm/purchase/quote?chainId=146&optionMarket=${optionMarket}&user=${userAddress}&strike=${tick.strike}&markPrice=${spotPriceGlobal}&type=${optionType}&amount=${tick.usedLiquidity}&ttl=${ttlSeconds}`;
-            
             return fetch(tickQuoteUrl)
               .then(res => res.json())
               .then(data => {
-                console.log("Premium Quote Response for strike:", tick.strike, data);
                 const decimals = data.token.decimals;
                 const premiumValue = parseFloat(data.premium) / Math.pow(10, decimals);
                 return premiumValue;
               })
-              .catch(err => {
-                console.error("Error fetching premium for tick", tick.strike, err);
-                return 0;
-              });
+              .catch(err => { return 0; });
           });
           const chosenTickPremiums = await Promise.all(premiumPromises);
           chosenTicks.forEach((tick, index) => {
             tick.premiumCost = chosenTickPremiums[index];
           });
           totalPremium = chosenTicks.reduce((sum, tick) => sum + tick.premiumCost, 0);
-          
           const table = document.getElementById('liquidityTable');
-          table.innerHTML = `
-            <tr>
-              <th>Purchase Range</th>
-              <th>Purchased Amount</th>
+          table.innerHTML = `<tr>
+              <th>Range</th>
+              <th>Amount</th>
               <th>Cost</th>
               <th>Token</th>
               <th>Breakdown</th>
-            </tr>
-          `;
+            </tr>`;
           if (chosenTicks.length > 0) {
             const firstStrike = chosenTicks[0].strike;
             const lastStrike = chosenTicks[chosenTicks.length - 1].strike;
-            const usedLiquiditySum = chosenTicks.reduce((sum, tick) => sum + tick.usedLiquidity, 0);
+            const usedLiquiditySum = chosenTicks.reduce((sum, t) => sum + t.usedLiquidity, 0);
             const summaryRow = document.createElement('tr');
-            summaryRow.innerHTML = `
-              <td>${firstStrike.toFixed(4)} - ${lastStrike.toFixed(4)}</td>
+            summaryRow.innerHTML = `<td>${firstStrike.toFixed(4)} - ${lastStrike.toFixed(4)}</td>
               <td>${usedLiquiditySum}</td>
               <td>${totalPremium.toFixed(4)}</td>
               <td>${chosenTicks[0].tokenSymbol}</td>
@@ -447,31 +516,26 @@
                   <summary>Show Breakdown</summary>
                   <table>
                     <tr>
-                      <th>Tick (Strike)</th>
-                      <th>Used Liquidity</th>
-                      <th>Premium Cost</th>
+                      <th>Strike</th>
+                      <th>Amount</th>
+                      <th>Cost</th>
                       <th>Token</th>
                     </tr>
                   </table>
                 </details>
-              </td>
-            `;
+              </td>`;
             table.appendChild(summaryRow);
             const detailsElem = summaryRow.querySelector('details');
             const breakdownTable = detailsElem.querySelector('table');
             chosenTicks.forEach(tick => {
               const row = document.createElement('tr');
-              row.innerHTML = `
-                <td>${tick.strike.toFixed(4)}</td>
+              row.innerHTML = `<td>${tick.strike.toFixed(4)}</td>
                 <td>${tick.usedLiquidity}</td>
                 <td>${tick.premiumCost.toFixed(4)}</td>
-                <td>${tick.tokenSymbol}</td>
-              `;
+                <td>${tick.tokenSymbol}</td>`;
               breakdownTable.appendChild(row);
             });
           }
-          
-          // 6. Prepare Data for the PnL Chart Using the Chosen Ticks.
           underlyingPrices = [];
           payoffCurve = [];
           let lower, upper, rangeMin, rangeMax;
@@ -488,25 +552,21 @@
             underlyingPrices.push(price);
             let cumulativePayoff = 0;
             if (optionType === 'call') {
-              chosenTicks.forEach(tick => {
-                cumulativePayoff += Math.max(price - tick.strike, 0) * tick.usedLiquidity;
+              chosenTicks.forEach(t => {
+                cumulativePayoff += Math.max(price - t.strike, 0) * t.usedLiquidity;
               });
             } else {
-              chosenTicks.forEach(tick => {
-                cumulativePayoff += Math.max(tick.strike - price, 0) * tick.usedLiquidity;
+              chosenTicks.forEach(t => {
+                cumulativePayoff += Math.max(t.strike - price, 0) * t.usedLiquidity;
               });
             }
             payoffCurve.push(cumulativePayoff);
           }
-          
           document.getElementById('toggleChartBtn').style.display = "inline-block";
           currentChartType = "PnL";
           document.getElementById('toggleChartBtn').innerText = "Show Liquidity Chart";
           renderPnLChart();
-          
-        } catch (error) {
-          console.error("Error fetching or processing data:", error);
-        }
+        } catch (error) {}
       });
     </script>
   </body>
