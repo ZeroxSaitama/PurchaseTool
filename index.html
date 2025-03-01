@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Options Liquidity & PnL Tool</title>
+    <title>Stryke</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.1.0"></script>
@@ -64,12 +64,10 @@
         border: 1px solid #444 !important;
         padding: 8px !important;
       }
-      /* Force the td containing <details> to remain dark */
       table#liquidityTable td:nth-child(5) {
         background-color: #1a1a1a !important;
         position: relative;
       }
-      /* Force the details element itself to be dark */
       table#liquidityTable td:nth-child(5) details {
         background-color: #1a1a1a !important;
         display: block;
@@ -126,7 +124,7 @@
     <div class="container">
       <div class="card mb-4">
         <div class="card-header d-flex align-items-center">
-          <h4 class="mb-0">Configure Your Trade</h4>
+          <h4 class="mb-0">Trade</h4>
         </div>
         <div class="card-body">
           <div class="row g-3">
@@ -171,7 +169,7 @@
       </div>
       <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
-          <h4 class="mb-0">Exposure Overview</h4>
+          <h4 class="mb-0">Details</h4>
         </div>
         <div class="card-body">
           <div class="table-responsive">
@@ -354,8 +352,8 @@
           data: {
             labels: labels,
             datasets: [
-              { label: 'Used Liquidity', data: usedData, backgroundColor: usedColors },
-              { label: 'Remaining Liquidity', data: remainingData, backgroundColor: 'rgba(128,128,128,0.8)' }
+              { label: 'Liquidity Purchased', data: usedData, backgroundColor: usedColors },
+              { label: 'Total Liquidity', data: remainingData, backgroundColor: 'rgba(128,128,128,0.8)' }
             ]
           },
           options: {
@@ -363,7 +361,7 @@
             plugins: {
               title: {
                 display: true,
-                text: 'Liquidity Breakdown by Chosen Tick',
+                text: 'Liquidity Breakdown of Position ',
                 color: "#ffcc00"
               }
             },
@@ -498,7 +496,7 @@
           table.innerHTML = `<tr>
               <th>Range</th>
               <th>Amount</th>
-              <th>Costs</th>
+              <th>Premium</th>
               <th>Token</th>
               <th>Breakdown</th>
             </tr>`;
@@ -518,7 +516,7 @@
                     <tr>
                       <th>Strike</th>
                       <th>Amount</th>
-                      <th>Cost</th>
+                      <th>Premium</th>
                       <th>Token</th>
                     </tr>
                   </table>
@@ -571,3 +569,4 @@
     </script>
   </body>
 </html>
+
