@@ -271,7 +271,7 @@
               x: {
                 type: 'linear',
                 position: 'bottom',
-                title: { display: true, text: 'Underlying Price', color: "#ffcc00" },
+                title: { display: true, text: 'Price', color: "#ffcc00" },
                 min: underlyingPrices[0],
                 max: underlyingPrices[underlyingPrices.length - 1],
                 ticks: {
@@ -361,14 +361,14 @@
             plugins: {
               title: {
                 display: true,
-                text: 'Liquidity Breakdown of Position ',
+                text: 'Liquidity Breakdown',
                 color: "#ffcc00"
               }
             },
             scales: {
               x: {
                 stacked: true,
-                title: { display: true, text: 'Tick Strike', color: "#ffcc00" },
+                title: { display: true, text: 'Price', color: "#ffcc00" },
                 ticks: { color: "#fff" },
                 grid: { color: "rgba(255,255,255,0.2)" }
               },
