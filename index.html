@@ -2,15 +2,12 @@
 <html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <title>Stryke.xyz - Trade</title>
+    <title>Stryke.xyz - Earn</title>
     <!-- Import Inter Font -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <!-- Tailwind CSS -->
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js and Plugin -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.1.0"></script>
-    <!-- Tippy.js for tooltips -->
+    <!-- Tippy.js for enhanced tooltips -->
     <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/animations/shift-away.css" />
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
@@ -20,556 +17,559 @@
         theme: {
           extend: {
             fontFamily: { sans: ['Inter', 'sans-serif'] },
-            colors: { primary: '#FBBF24' },
+            colors: {
+              primary: '#FBBF24',
+              bullishGreen: '#2ecc71',
+              neonGreen: '#0FFF95'
+            },
             backgroundImage: {
-              'hero-light': 'linear-gradient(135deg, rgba(255,255,255,0.9), rgba(243,244,246,0.9))',
-              'hero-dark': 'linear-gradient(135deg, rgba(31,41,55,0.9), rgba(55,65,81,0.9))',
+              // Light mode uses a granulated dark-matter texture.
+              'grain-light': "url('https://www.transparenttextures.com/patterns/dark-matter.png')"
             },
             boxShadow: {
               'card': '0 4px 6px rgba(0,0,0,0.1)',
-              'float': '0 10px 15px rgba(0,0,0,0.1)',
+              '3d': '0 10px 30px rgba(0,0,0,0.6)',
             },
           }
         }
       }
     </script>
-  </head>
-  <body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
-    <!-- Sidebar -->
-    <div class="min-h-screen flex">
-      <aside class="w-64 bg-white dark:bg-gray-800 shadow-lg">
-        <div class="p-6">
-          <!-- Stryke logo updated -->
-          <img src="https://i.ibb.co/FLF1CX6D/Logomark-White-Transparent.png" alt="Stryke Logo" class="inline-block mr-2 rounded-full shadow-sm" />
-        </div>
-        <nav class="mt-6">
-          <a href="trade.html" class="block px-6 py-3 text-lg font-medium text-yellow-500 dark:text-yellow-400 border-l-4 border-yellow-500">Trade</a>
-          <a href="earn.html" class="block px-6 py-3 text-lg font-medium hover:bg-yellow-100 dark:hover:bg-gray-700 transition">Earn</a>
-        </nav>
-      </aside>
+    <!-- Custom CSS for 3D and Neumorphism -->
+    <style>
+      /* Neumorphic sunken effect for inputs and toggle containers */
+      .neumorphic-sunken {
+        background: #e0e0e0;
+        border-radius: 0.375rem;
+        box-shadow: inset 5px 5px 10px rgba(0,0,0,0.2),
+                    inset -5px -5px 10px rgba(255,255,255,0.7);
+      }
+      .dark .neumorphic-sunken {
+        background: #1F1F1F;
+        box-shadow: inset 5px 5px 10px rgba(0,0,0,0.9),
+                    inset -5px -5px 10px rgba(50,50,50,0.7);
+      }
       
-      <!-- Main Content -->
-      <main class="flex-1 p-6">
-        <!-- Top Navbar for Mobile -->
-        <div class="flex justify-between items-center mb-4 sm:hidden">
-          <h1 class="text-2xl font-bold">Trade</h1>
-          <button id="modeToggle" class="p-2 rounded-full bg-gray-200 dark:bg-gray-700 transition transform hover:scale-105 focus:outline-none">
-            <svg id="sunIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-500 dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m8.66-9H21m-16 0H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M12 8a4 4 0 110 8 4 4 0 010-8z" />
-            </svg>
-            <svg id="moonIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-500 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-            </svg>
+      /* 3D effect for buttons (light mode) */
+      .btn-3d {
+        background: linear-gradient(145deg, #2ecc71, #0FFF95);
+        box-shadow: 5px 5px 10px rgba(0,0,0,0.2),
+                    -3px -3px 6px rgba(255,255,255,0.8),
+                    inset 2px 2px 4px rgba(255,255,255,0.5),
+                    inset -3px -3px 5px rgba(0,0,0,0.2);
+        border: none;
+        border-radius: 0.375rem;
+        color: black;
+      }
+      .btn-3d:active {
+        box-shadow: inset 5px 5px 10px rgba(0,0,0,0.3),
+                    inset -3px -3px 6px rgba(255,255,255,0.8);
+        background: linear-gradient(145deg, #0FFF95, #2ecc71);
+      }
+      /* Dark mode override for buttons */
+      .dark .btn-3d {
+        background: linear-gradient(145deg, #2ecc71, #0FFF95);
+        box-shadow: 5px 5px 10px rgba(0,0,0,0.5),
+                    -3px -3px 6px rgba(0,0,0,0.4),
+                    inset 2px 2px 4px rgba(0,0,0,0.6),
+                    inset -3px -3px 5px rgba(0,0,0,0.5);
+        color: black;
+      }
+      .dark .btn-3d:active {
+        box-shadow: inset 5px 5px 10px rgba(0,0,0,0.7),
+                    inset -3px -3px 6px rgba(0,0,0,0.6);
+        background: linear-gradient(145deg, #0FFF95, #2ecc71);
+      }
+      
+      /* 3D effect for dropdown selectors – light mode */
+      .select-3d {
+        background: linear-gradient(145deg, #e5e7eb, #d1d5db);
+        box-shadow: 5px 5px 10px rgba(0,0,0,0.2),
+                    -3px -3px 6px rgba(255,255,255,0.8),
+                    inset 2px 2px 4px rgba(255,255,255,0.5),
+                    inset -3px -3px 5px rgba(0,0,0,0.2);
+        border: none;
+        color: inherit;
+      }
+      .dark .select-3d {
+        background: linear-gradient(145deg, #2e2e2e, #1A1A1A);
+        box-shadow: 5px 5px 10px rgba(0,0,0,0.5),
+                    -3px -3px 6px rgba(0,0,0,0.4),
+                    inset 2px 2px 4px rgba(0,0,0,0.6),
+                    inset -3px -3px 5px rgba(0,0,0,0.5);
+      }
+      
+      /* 3D effect for table headers – light mode */
+      .table-3d th {
+        background: linear-gradient(145deg, #e5e7eb, #d1d5db);
+        box-shadow: 2px 2px 4px rgba(0,0,0,0.2), inset -2px -2px 4px rgba(255,255,255,0.5);
+        color: black;
+      }
+      .dark .table-3d th {
+        background: linear-gradient(145deg, #2e2e2e, #1A1A1A);
+        box-shadow: 2px 2px 4px rgba(0,0,0,0.5), inset -2px -2px 4px rgba(0,0,0,0.3);
+        color: white;
+      }
+      
+      /* Dual-line styling for TVL and APR cells */
+      .primary-value {
+        font-size: 1rem;
+        font-weight: 600;
+      }
+      .secondary-value {
+        font-size: 0.75rem;
+        color: rgba(107, 114, 128, 0.8);
+      }
+      .dark .secondary-value {
+        color: rgba(156, 163, 175, 0.8);
+      }
+    </style>
+  </head>
+  <body class="font-sans bg-grain-light dark:bg-[#1F1F1F] bg-cover bg-center bg-no-repeat text-gray-900 dark:text-gray-100 transition-colors duration-300 min-h-screen">
+    <!-- Top Navigation Bar with Uniform Dark Tone -->
+    <header class="bg-[#1A1A1A] shadow-3d z-50 relative">
+      <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+        <!-- Left: Logo and Navigation Links -->
+        <div class="flex items-center space-x-4">
+          <img src="https://www.stryke.xyz/images/brand/logo.ico" alt="Stryke Logo" class="w-10 h-10 rounded-full" />
+          <nav class="flex items-center space-x-6 text-sm">
+            <a href="trade.html" class="text-white hover:opacity-80 transition px-2 py-1">Trade</a>
+            <a href="earn.html" class="text-neonGreen font-bold border-b-2 border-neonGreen transition">Earn</a>
+          </nav>
+        </div>
+        <!-- Right: Dark/Light Mode Toggle (icon-only) -->
+        <button id="modeToggle" class="p-2 transition transform hover:scale-105 focus:outline-none">
+          <svg id="sunIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-400 dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 3v1m0 16v1m8.66-9H21m-16 0H3
+                     m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707
+                     m12.728 0l-.707.707M6.343 17.657l-.707.707
+                     M12 8a4 4 0 110 8 4 4 0 010-8z" />
+          </svg>
+          <svg id="moonIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-400 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+          </svg>
+        </button>
+      </div>
+    </header>
+    
+    <!-- Hero Banner -->
+    <section class="max-w-7xl mx-auto px-4 mt-6 mb-8 relative">
+      <div class="w-full h-64 bg-gradient-to-r from-gray-800 to-gray-600 rounded-lg shadow-3d overflow-hidden relative">
+        <img src="https://www.stryke.xyz/images/carousel/sonic_launch.webp" alt="Banner"
+             class="w-full h-full object-cover brightness-75" />
+        <div class="absolute inset-0 bg-black bg-opacity-30"></div>
+        <div class="absolute inset-0 flex flex-col justify-center items-center z-10">
+          <h1 class="text-4xl sm:text-5xl font-extrabold mb-2 text-white">Stryke.xyz</h1>
+          <p class="text-xl sm:text-2xl text-gray-300">Worry Free No Liquidation Leverage</p>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Main Content Wrapper -->
+    <main class="max-w-7xl mx-auto px-4 pb-12">
+      <!-- Filter + Toggle + Search Row -->
+      <div class="flex flex-wrap items-center justify-between mb-6 space-y-4 sm:space-y-0">
+        <!-- Left side: Filters -->
+        <div class="flex flex-wrap items-center space-x-4">
+          <div>
+            <label for="chainFilter" class="block text-xs font-medium text-gray-700 dark:text-gray-300">Chain</label>
+            <select id="chainFilter" class="select-3d mt-1 block w-28 rounded-md text-sm focus:ring focus:ring-green-400 transition">
+              <option value="146">Sonic</option>
+              <option value="42161">Arbitrum</option>
+            </select>
+          </div>
+          <div>
+            <label for="dexFilter" class="block text-xs font-medium text-gray-700 dark:text-gray-300">DEX</label>
+            <select id="dexFilter" class="select-3d mt-1 block w-28 rounded-md text-sm focus:ring focus:ring-green-400 transition">
+              <option value="shadow">Shadow</option>
+            </select>
+          </div>
+          <div>
+            <label for="strategyDropdown" class="block text-xs font-medium text-gray-700 dark:text-gray-300">Strategy</label>
+            <select id="strategyDropdown" class="select-3d mt-1 w-28 rounded-md text-sm focus:ring focus:ring-green-400 transition">
+              <option value="passive">Passive (±30%)</option>
+              <option value="wide">Wide (±15%)</option>
+              <option value="narrow">Narrow (±7.5%)</option>
+              <option value="aggressive">Aggressive (±2%)</option>
+              <option value="insane">Insane (±0%)</option>
+            </select>
+          </div>
+        </div>
+        <!-- Right side: Toggle, Sunken Search Bar, and Filters Button -->
+        <div class="flex items-center space-x-4 w-full sm:w-auto">
+          <!-- Minimal Toggle for Options vs Swaps with Neumorphic Sunken Effect -->
+          <div id="metricsToggle" class="neumorphic-sunken relative w-36 sm:w-48 h-8 rounded-md overflow-hidden cursor-pointer">
+            <span id="toggleOptions" class="absolute left-0 top-0 w-1/2 h-full flex items-center justify-center text-xs z-10">Options</span>
+            <span id="toggleSwaps" class="absolute right-0 top-0 w-1/2 h-full flex items-center justify-center text-xs z-10">Swaps</span>
+            <!-- Toggle Mask behind the text -->
+            <div id="toggleMask" class="absolute top-0 left-0 w-1/2 h-full transition-all duration-300"></div>
+          </div>
+          <!-- Sunken Search Bar -->
+          <div class="relative">
+            <input id="poolSearch" type="text" placeholder="Search..." 
+                   class="neumorphic-sunken text-gray-100 pl-3 pr-8 py-1 rounded-md focus:outline-none focus:ring focus:ring-green-400 text-sm transition w-36 sm:w-48" />
+          </div>
+          <!-- Filters Button with 3D effect -->
+          <button class="btn-3d px-3 py-1 text-sm font-medium">
+            Filters
           </button>
         </div>
-        
-        <!-- Hero Banner -->
-        <section class="mb-6 p-8 rounded-lg shadow-lg bg-hero-light dark:bg-hero-dark relative overflow-hidden">
-          <img src="https://www.stryke.xyz/images/carousel/sonic_launch.webp" alt="Banner" class="w-full h-48 object-cover rounded-lg filter brightness-75" />
-          <div class="absolute inset-0 bg-black opacity-30"></div>
-          <div class="relative z-10 mt-4">
-            <h1 class="text-4xl sm:text-5xl font-bold mb-2">Trade Options</h1>
-            <p class="text-xl sm:text-2xl text-gray-700 dark:text-gray-300">
-              Execute seamless, permissionless options trades with precision.
-            </p>
-          </div>
-        </section>
-        
-        <!-- Trade Form Card -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
-          <h2 class="text-2xl font-semibold mb-4">Trade</h2>
-          <!-- Underlying Asset Pair Card -->
-          <div id="assetPair" class="relative w-24 h-24 mb-4">
-            <!-- Main asset logo (will be updated via JS based on market selection) -->
-            <img id="assetLogo" src="" alt="Asset Logo" class="w-full h-full object-contain rounded-full shadow-lg" />
-            <!-- USDC logo overlay at bottom-right -->
-            <img src="https://www.stryke.xyz/images/tokens/usdc.svg" alt="USDC" class="absolute bottom-0 right-0 w-8 h-8 object-contain border-2 border-white dark:border-gray-800 rounded-full shadow-md" />
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-5 gap-4">
-            <div>
-              <label for="marketSelect" class="block text-sm font-medium">Market</label>
-              <select id="marketSelect" class="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring focus:ring-yellow-500 transition">
-                <option value="S">wS/USDC</option>
-                <option value="ETH">wETH/USDC</option>
-              </select>
-            </div>
-            <div>
-              <label for="expirySelect" class="block text-sm font-medium">Expiry</label>
-              <select id="expirySelect" class="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring focus:ring-yellow-500 transition">
-                <option value="3600">1h</option>
-                <option value="7200">2h</option>
-                <option value="21600">6h</option>
-                <option value="43200">12h</option>
-                <option value="86400">24h</option>
-                <option value="604800">1 week</option>
-              </select>
-            </div>
-            <div>
-              <label for="optionType" class="block text-sm font-medium">Option Type</label>
-              <select id="optionType" class="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring focus:ring-yellow-500 transition">
-                <option value="call">Call</option>
-                <option value="put">Put</option>
-              </select>
-            </div>
-            <div>
-              <label for="strikeInput" class="block text-sm font-medium">Strike Price</label>
-              <input type="number" id="strikeInput" step="0.0001" value="0.72" class="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring focus:ring-yellow-500 transition" />
-            </div>
-            <div>
-              <label for="tradeAmount" class="block text-sm font-medium">Amount</label>
-              <input type="number" id="tradeAmount" step="any" value="100" class="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring focus:ring-yellow-500 transition" />
-            </div>
-          </div>
-          <div class="mt-4">
-            <button id="submitBtn" class="px-6 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-medium rounded-md transition shadow">Submit</button>
-          </div>
-        </div>
-        
-        <!-- Liquidity Details Card -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
-          <h2 class="text-2xl font-semibold mb-4">Details</h2>
-          <div class="overflow-x-auto">
-            <table id="liquidityTable" class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <!-- Table content injected via JavaScript -->
-            </table>
-          </div>
-        </div>
-        
-        <!-- Chart Card -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
-          <div class="flex justify-between items-center mb-4">
-            <h2 id="chartTitle" class="text-2xl font-semibold">PnL Chart</h2>
-            <button id="toggleChartBtn" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-black font-medium rounded-md transition hidden">Show Liquidity Chart</button>
-          </div>
-          <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
-            <canvas id="chartCanvas" class="w-full" height="400"></canvas>
-          </div>
-        </div>
-      </main>
-    </div>
-    
-    <!-- Trade Page JavaScript -->
-    <script>
-      // Global variables for chart and trade calculations
-      let filteredTicks = [];
-      let chosenTicks = [];
-      let totalPremium = 0;
-      let underlyingPrices = [];
-      let payoffCurve = [];
-      let currentChartType = "PnL";
-      let myChart = null;
-      let globalOptionType = "";
-      let exposureFilledStrikeGlobal = 0;
-      let spotPriceGlobal = 0;
+      </div>
       
-      // Market configuration for trade.
-      const marketConfigTrade = {
-        "S": {
-          optionMarket: "0x342e4068bA07bbCcBDDE503b2451FAa3D3C0278B",
-          spotApi: "https://api.stryke.xyz/uniswap-prices/mark-price?chainId=146&ticker=WS/USDC.e"
+      <!-- Summary Stats Row -->
+      <div class="flex justify-between mb-6">
+        <div class="text-left">
+          <h5 class="text-lg sm:text-xl font-semibold text-green-400">
+            TVL: <span id="totalTVL" class="text-white"></span>
+          </h5>
+        </div>
+        <div class="text-right">
+          <h5 class="text-lg sm:text-xl font-semibold text-green-400">
+            24h Volume: <span id="totalVolume" class="text-white"></span>
+          </h5>
+        </div>
+      </div>
+      
+      <!-- Pools Table Panel with 3D Table Header -->
+      <div class="bg-gray-200 dark:bg-[#1A1A1A] rounded-lg shadow-3d p-6 relative overflow-hidden">
+        <div class="overflow-x-auto">
+          <table id="poolsTable" class="min-w-full divide-y divide-gray-400 dark:divide-gray-700 text-sm">
+            <thead class="table-3d" style="background-color: transparent;">
+              <tr>
+                <th class="px-4 py-3 uppercase tracking-wider font-bold text-left">Pool</th>
+                <th class="px-4 py-3 uppercase tracking-wider font-bold text-left">TVL</th>
+                <th class="px-4 py-3 uppercase tracking-wider font-bold text-left">APR</th>
+                <th class="px-4 py-3 uppercase tracking-wider font-bold text-left">Rewards</th>
+                <th class="px-4 py-3 uppercase tracking-wider font-bold text-left">Implied Daily Move</th>
+                <th class="px-4 py-3 uppercase tracking-wider font-bold text-left">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="poolsTableBody" class="divide-y divide-gray-300 dark:divide-gray-700">
+              <!-- Table rows injected via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <!-- Loading Indicator & Skeleton Loader -->
+      <div id="loadingIndicator" class="flex items-center justify-center py-4 hidden">
+        <svg class="animate-spin h-6 w-6 text-neonGreen mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+        </svg>
+        <span class="text-lg font-medium text-gray-200">Updating...</span>
+      </div>
+    </main>
+    
+    <!-- JavaScript: Logic & Event Handlers -->
+    <script>
+      let currentMetrics = "options"; // "options" or "swaps"
+      
+      // Dark/Light Mode Toggle
+      const modeToggle = document.getElementById('modeToggle');
+      modeToggle.addEventListener('click', () => {
+        document.documentElement.classList.toggle('dark');
+        modeToggle.classList.toggle('rotate-180');
+      });
+      
+      // Minimal Toggle for Options vs Swaps – with neumorphic sunken effect
+      const metricsToggle = document.getElementById('metricsToggle');
+      const toggleMask = document.getElementById('toggleMask');
+      const toggleOptions = document.getElementById('toggleOptions');
+      const toggleSwaps = document.getElementById('toggleSwaps');
+      // Set initial styles for toggle mask and text colors
+      currentMetrics = "options";
+      toggleMask.style.left = "0";
+      toggleMask.style.width = "50%";
+      toggleMask.style.background = "linear-gradient(145deg, #2ecc71, #0FFF95)";
+      // Set text colors based on active side:
+      toggleOptions.classList.add("text-black");
+      toggleSwaps.classList.remove("text-black");
+      
+      metricsToggle.addEventListener('click', () => {
+        if (currentMetrics === "options") {
+          currentMetrics = "swaps";
+          toggleMask.style.left = "50%";
+          toggleOptions.classList.remove("text-black");
+          toggleSwaps.classList.add("text-black");
+        } else {
+          currentMetrics = "options";
+          toggleMask.style.left = "0";
+          toggleOptions.classList.add("text-black");
+          toggleSwaps.classList.remove("text-black");
+        }
+        loadEarnPage();
+      });
+      
+      // Market configuration.
+      const marketConfig = {
+        "146": {
+          wS: {
+            optionMarket: "0x342e4068bA07bbCcBDDE503b2451FAa3D3C0278B",
+            spotApi: "https://api.stryke.xyz/uniswap-prices/mark-price?chainId=146&ticker=WS/USDC.e"
+          },
+          WETH: {
+            optionMarket: "0xYourWETHOptionMarketFor146",
+            spotApi: "https://api.stryke.xyz/uniswap-prices/mark-price?chainId=146&ticker=WETH/USDC.e"
+          }
         },
-        "ETH": {
-          optionMarket: "0x9d3828e89Fadc4DEc77758988b388435Fe0f8DCa",
-          spotApi: "https://api.stryke.xyz/uniswap-prices/mark-price?chainId=146&ticker=WETH/USDC.e"
+        "42161": {
+          WETH: {
+            optionMarket: "0xArbitrumOptionMarketForWETH",
+            spotApi: "https://api.stryke.xyz/uniswap-prices/mark-price?chainId=42161&ticker=WETH/USDC.e"
+          },
+          wS: {
+            optionMarket: "0xArbitrumOptionMarketForWS",
+            spotApi: "https://api.stryke.xyz/uniswap-prices/mark-price?chainId=42161&ticker=WS/USDC.e"
+          }
         }
       };
       
-      const intradayHook = "0x78d96C07B16d8f911c4cD14EE10601921E4fb8aF";
-      const weeklyHook = "0xf6314300b42B7D88c153348921a95d3CA95E74Bd";
-      
-      function destroyChart() {
-        if (myChart instanceof Chart) {
-          myChart.destroy();
-        }
+      async function fetchStrykeLPData() {
+        const url = "https://api.stryke.xyz/v1.1/clamm/option-markets?chains=42161%2C146%2C8453%2C81457%2C5000%2C80094";
+        const response = await fetch(url);
+        const data = await response.json();
+        return data.filter(pool => !pool.deprecated && (pool.chainId === 146 || pool.chainId === 42161));
       }
       
-      async function fetchSpotPriceTrade(market) {
-        const url = marketConfigTrade[market].spotApi;
-        try {
-          const response = await fetch(url);
-          const data = await response.json();
-          return parseFloat(data.markPrice);
-        } catch (error) {
-          console.error("Error fetching spot price:", error);
-          return 0;
-        }
+      async function fetchShadowData() {
+        const url = "https://api.shadow.so/mixed-pairs";
+        const response = await fetch(url);
+        const rawShadow = await response.json();
+        return rawShadow.pairs;
       }
       
-      function renderPnLChart() {
-        let breakeven = null;
-        for (let i = 1; i < payoffCurve.length; i++) {
-          if (globalOptionType === 'call') {
-            if (payoffCurve[i - 1] < totalPremium && payoffCurve[i] >= totalPremium) {
-              const x1 = underlyingPrices[i - 1];
-              const y1 = payoffCurve[i - 1];
-              const x2 = underlyingPrices[i];
-              const y2 = payoffCurve[i];
-              breakeven = x1 + ((totalPremium - y1) * (x2 - x1)) / (y2 - y1);
-              break;
-            }
-          } else {
-            if (payoffCurve[i - 1] > totalPremium && payoffCurve[i] <= totalPremium) {
-              const x1 = underlyingPrices[i - 1];
-              const y1 = payoffCurve[i - 1];
-              const x2 = underlyingPrices[i];
-              const y2 = payoffCurve[i];
-              breakeven = x1 + ((y1 - totalPremium) * (x2 - x1)) / (y1 - y2);
-              break;
-            }
-          }
-        }
-        if (breakeven === null) {
-          breakeven = underlyingPrices[underlyingPrices.length - 1];
-        }
-        
-        const ctx = document.getElementById('chartCanvas').getContext('2d');
-        destroyChart();
-        myChart = new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: underlyingPrices,
-            datasets: [{
-              label: 'Cumulative Payoff',
-              data: payoffCurve,
-              borderColor: "#ffcc00",
-              fill: false,
-              tension: 0.2
-            }]
-          },
-          options: {
-            scales: {
-              x: {
-                type: 'linear',
-                position: 'bottom',
-                title: { display: true, text: 'Price', color: "#ffcc00" },
-                min: underlyingPrices[0],
-                max: underlyingPrices[underlyingPrices.length - 1],
-                ticks: {
-                  color: "#fff",
-                  callback: function(value) { return value.toFixed(4); }
-                },
-                grid: { color: "rgba(255,255,255,0.2)" }
-              },
-              y: {
-                beginAtZero: true,
-                title: { display: true, text: 'Cumulative Payoff', color: "#ffcc00" },
-                ticks: { color: "#fff" },
-                grid: { color: "rgba(255,255,255,0.2)" }
-              }
-            },
-            plugins: {
-              tooltip: {
-                callbacks: {
-                  label: function(context) {
-                    const x = context.parsed.x;
-                    let exposure = 0;
-                    if (globalOptionType === 'call') {
-                      chosenTicks.forEach(tick => { if (tick.strike <= x) exposure += tick.usedLiquidity; });
-                    } else {
-                      chosenTicks.forEach(tick => { if (tick.strike >= x) exposure += tick.usedLiquidity; });
-                    }
-                    return context.dataset.label + ': ' + context.parsed.y.toFixed(4) + ' (Exposure: ' + exposure + ')';
-                  }
-                }
-              },
-              annotation: {
-                annotations: {
-                  premiumLine: {
-                    type: 'line',
-                    mode: 'horizontal',
-                    scaleID: 'y',
-                    value: totalPremium,
-                    borderColor: 'green',
-                    borderWidth: 2,
-                    label: { enabled: true, content: 'Total Premium', color: "#fff" }
-                  },
-                  breakevenLine: {
-                    type: 'line',
-                    mode: 'vertical',
-                    scaleID: 'x',
-                    value: breakeven,
-                    borderColor: 'red',
-                    borderWidth: 2,
-                    label: { enabled: true, content: 'Breakeven', color: "#fff" }
-                  },
-                  exposureLine: {
-                    type: 'line',
-                    mode: 'vertical',
-                    scaleID: 'x',
-                    value: exposureFilledStrikeGlobal,
-                    borderColor: 'orange',
-                    borderWidth: 2,
-                    label: { enabled: true, content: 'Exposure Filled', color: "#fff" }
-                  }
-                }
-              }
-            }
-          }
+      function formatNumber(num) {
+        if (!num || isNaN(num)) return "N/A";
+        return parseFloat(num).toLocaleString(undefined, { maximumFractionDigits: 2 });
+      }
+      
+      function tokensMatch(strykePool, shadowPool) {
+        const callAddr = strykePool.callToken.address.toLowerCase();
+        const putAddr = strykePool.putToken.address.toLowerCase();
+        const token0 = shadowPool.token0.toLowerCase();
+        const token1 = shadowPool.token1.toLowerCase();
+        return (callAddr === token0 && putAddr === token1) ||
+               (callAddr === token1 && putAddr === token0);
+      }
+      
+      function chooseBestShadowPool(strykePool, shadowPools) {
+        const matches = shadowPools.filter(sh => tokensMatch(strykePool, sh));
+        if (matches.length === 0) return null;
+        return matches.reduce((max, cur) => {
+          const maxTVL = max.tvl ? parseFloat(max.tvl) : 0;
+          const curTVL = cur.tvl ? parseFloat(cur.tvl) : 0;
+          return (curTVL > maxTVL) ? cur : max;
         });
-        document.getElementById('chartTitle').innerText = "PnL Chart";
       }
       
-      function renderLiquidityChart() {
-        const labels = chosenTicks.map(tick => tick.strike.toFixed(4));
-        const usedData = chosenTicks.map(tick => tick.usedLiquidity);
-        const remainingData = chosenTicks.map(tick => tick.totalLiquidity - tick.usedLiquidity);
-        const usedColors = chosenTicks.map(() => '#ffcc00');
-        
-        const ctx = document.getElementById('chartCanvas').getContext('2d');
-        destroyChart();
-        myChart = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: labels,
-            datasets: [
-              { label: 'Liquidity Purchased', data: usedData, backgroundColor: usedColors },
-              { label: 'Total Liquidity', data: remainingData, backgroundColor: 'rgba(128,128,128,0.8)' }
-            ]
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              title: { display: true, text: 'Liquidity Breakdown', color: "#ffcc00" }
-            },
-            scales: {
-              x: { stacked: true, title: { display: true, text: 'Price', color: "#ffcc00" }, ticks: { color: "#fff" }, grid: { color: "rgba(255,255,255,0.2)" } },
-              y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Liquidity', color: "#ffcc00" }, ticks: { color: "#fff" }, grid: { color: "rgba(255,255,255,0.2)" } }
-            }
-          }
-        });
-        document.getElementById('chartTitle').innerText = "Purchase Distribution";
+      async function fetchSpotPrice(url) {
+        const response = await fetch(url);
+        const data = await response.json();
+        return parseFloat(data.markPrice);
       }
       
-      document.getElementById('toggleChartBtn').addEventListener('click', function() {
-        if (currentChartType === "PnL") {
-          currentChartType = "Liquidity";
-          this.innerText = "Show PnL Chart";
-          renderLiquidityChart();
-        } else {
-          currentChartType = "PnL";
-          this.innerText = "Show Liquidity Chart";
-          renderPnLChart();
-        }
-      });
-      
-      // Trade form submission & data processing.
-      document.getElementById('submitBtn').addEventListener('click', async function() {
-        // Update asset pair image based on market selection.
-        const marketChoice = document.getElementById('marketSelect').value;
-        const assetLogo = document.getElementById('assetLogo');
-        if (marketChoice === "ETH") {
-          assetLogo.src = "https://www.stryke.xyz/images/tokens/weth.svg";
-        } else {
-          assetLogo.src = "https://www.stryke.xyz/images/tokens/ws.svg";
-        }
-        
-        const ttlSeconds = parseInt(document.getElementById('expirySelect').value);
-        const optionType = document.getElementById('optionType').value;
-        globalOptionType = optionType;
-        const strikeInput = parseFloat(document.getElementById('strikeInput').value);
-        const tradeAmount = parseFloat(document.getElementById('tradeAmount').value);
+      async function fetchAtmPremium(chainId, optionMarket, spotPrice, ttl) {
         const userAddress = "0xf8859BAae87Eac4C7EE0b81499eDDD99c778FBEB";
-        
-        const optionMarket = marketConfigTrade[marketChoice].optionMarket;
-        spotPriceGlobal = await fetchSpotPriceTrade(marketChoice);
-        console.log("Spot Price:", spotPriceGlobal);
-        
-        const liquidityUrl = `https://api.stryke.xyz/clamm/strikes-chain?chainId=146&optionMarket=${optionMarket}&callsReach=800&putsReach=800&filterDeprecated=true`;
-        try {
-          const liquidityResponse = await fetch(liquidityUrl);
-          const liquidityData = await liquidityResponse.json();
-          
-          let allTicks = [];
-          liquidityData.forEach(item => {
-            for (let key in item) {
-              const data = item[key][0];
-              const decimals = data.token.decimals;
-              const rawAvail = parseFloat(data.meta.availableTokenLiquidity);
-              const rawTotal = parseFloat(data.meta.totalTokenLiquidity);
-              const scaledAvail = rawAvail / Math.pow(10, decimals);
-              const scaledTotal = rawTotal / Math.pow(10, decimals);
-  
-              allTicks.push({
-                strike: parseFloat(key),
-                availableLiquidity: scaledAvail,
-                totalLiquidity: scaledTotal,
-                tokenSymbol: data.token.symbol,
-                hook: data.meta.hook
-              });
-            }
-          });
-          
-          let allowedHooks = [];
-          if (ttlSeconds < 604800) {
-            allowedHooks = [intradayHook.toLowerCase(), weeklyHook.toLowerCase()];
-          } else {
-            allowedHooks = [weeklyHook.toLowerCase()];
-          }
-          
-          let filteredTicks = [];
-          if (optionType === 'call') {
-            filteredTicks = allTicks.filter(tick =>
-              tick.strike >= strikeInput &&
-              (tick.tokenSymbol.toLowerCase().includes("ws") || tick.tokenSymbol.toLowerCase().includes("weth")) &&
-              allowedHooks.includes(tick.hook.toLowerCase())
-            );
-            filteredTicks.sort((a, b) => a.strike - b.strike);
-          } else {
-            filteredTicks = allTicks.filter(tick =>
-              tick.strike <= strikeInput &&
-              tick.tokenSymbol.toLowerCase().includes("usdc") &&
-              allowedHooks.includes(tick.hook.toLowerCase())
-            );
-            filteredTicks.sort((a, b) => b.strike - a.strike);
-          }
-          
-          chosenTicks = [];
-          let cumulative = 0;
-          for (let i = 0; i < filteredTicks.length; i++) {
-            if (cumulative >= tradeAmount) break;
-            let tick = Object.assign({}, filteredTicks[i]);
-            let needed = tradeAmount - cumulative;
-            if (tick.availableLiquidity >= needed) {
-              tick.usedLiquidity = needed;
-              cumulative += needed;
-            } else {
-              tick.usedLiquidity = tick.availableLiquidity;
-              cumulative += tick.availableLiquidity;
-            }
-            chosenTicks.push(tick);
-          }
-          
-          if (chosenTicks.length === 0) {
-            alert("No sufficient liquidity available for the given trade amount at this strike.");
-            return;
-          }
-          
-          exposureFilledStrikeGlobal = chosenTicks[chosenTicks.length - 1].strike;
-          
-          const premiumPromises = chosenTicks.map(tick => {
-            const tickQuoteUrl = `https://api.stryke.xyz/clamm/purchase/quote?chainId=146&optionMarket=${optionMarket}&user=${userAddress}&strike=${tick.strike}&markPrice=${spotPriceGlobal}&type=${optionType}&amount=${tick.usedLiquidity}&ttl=${ttlSeconds}`;
-            return fetch(tickQuoteUrl)
-              .then(res => res.json())
-              .then(data => {
-                console.log("Premium Quote Response for strike:", tick.strike, data);
-                const decimals = data.token.decimals;
-                const premiumValue = parseFloat(data.premium) / Math.pow(10, decimals);
-                return premiumValue;
-              })
-              .catch(err => {
-                console.error("Error fetching premium for tick", tick.strike, err);
-                return 0;
-              });
-          });
-          const chosenTickPremiums = await Promise.all(premiumPromises);
-          chosenTicks.forEach((tick, index) => {
-            tick.premiumCost = chosenTickPremiums[index];
-          });
-          totalPremium = chosenTicks.reduce((sum, tick) => sum + tick.premiumCost, 0);
-          
-          // Render the breakdown table (unchanged styling)
-          const table = document.getElementById('liquidityTable');
-          table.innerHTML = `
-            <tr>
-              <th class="px-4 py-2 text-left text-sm font-semibold uppercase tracking-wider">Range</th>
-              <th class="px-4 py-2 text-left text-sm font-semibold uppercase tracking-wider">Amount</th>
-              <th class="px-4 py-2 text-left text-sm font-semibold uppercase tracking-wider">Premium</th>
-              <th class="px-4 py-2 text-left text-sm font-semibold uppercase tracking-wider">Token</th>
-              <th class="px-4 py-2 text-left text-sm font-semibold uppercase tracking-wider">Breakdown</th>
-            </tr>
-          `;
-          if (chosenTicks.length > 0) {
-            const firstStrike = chosenTicks[0].strike;
-            const lastStrike = chosenTicks[chosenTicks.length - 1].strike;
-            const usedLiquiditySum = chosenTicks.reduce((sum, t) => sum + t.usedLiquidity, 0);
-            const summaryRow = document.createElement('tr');
-            summaryRow.innerHTML = `
-              <td class="px-4 py-2">${firstStrike.toFixed(4)} - ${lastStrike.toFixed(4)}</td>
-              <td class="px-4 py-2">${usedLiquiditySum}</td>
-              <td class="px-4 py-2">${totalPremium.toFixed(4)}</td>
-              <td class="px-4 py-2">${chosenTicks[0].tokenSymbol}</td>
-              <td class="px-4 py-2">
-                <details class="group">
-                  <summary class="cursor-pointer bg-gray-200 dark:bg-gray-700 rounded-md px-2 py-1 inline-block">Show Breakdown</summary>
-                  <table class="w-full mt-2 border-collapse">
-                    <tr class="bg-gray-100 dark:bg-gray-600">
-                      <th class="px-2 py-1 border text-xs font-semibold">Strike</th>
-                      <th class="px-2 py-1 border text-xs font-semibold">Amount</th>
-                      <th class="px-2 py-1 border text-xs font-semibold">Premium</th>
-                      <th class="px-2 py-1 border text-xs font-semibold">Token</th>
-                    </tr>
-                  </table>
-                </details>
-              </td>
-            `;
-            table.appendChild(summaryRow);
-            const detailsElem = summaryRow.querySelector('details');
-            const breakdownTable = detailsElem.querySelector('table');
-            chosenTicks.forEach(tick => {
-              const row = document.createElement('tr');
-              row.innerHTML = `
-                <td class="px-2 py-1 border">${tick.strike.toFixed(4)}</td>
-                <td class="px-2 py-1 border">${tick.usedLiquidity}</td>
-                <td class="px-2 py-1 border">${tick.premiumCost.toFixed(4)}</td>
-                <td class="px-2 py-1 border">${tick.tokenSymbol}</td>
-              `;
-              breakdownTable.appendChild(row);
-            });
-          }
-          
-          // Build chart data.
-          underlyingPrices = [];
-          payoffCurve = [];
-          let lower, upper;
-          if (optionType === 'put') {
-            chosenTicks.sort((a, b) => a.strike - b.strike);
-          }
-          lower = chosenTicks[0].strike;
-          upper = chosenTicks[chosenTicks.length - 1].strike;
-          const rangeMin = lower * 0.95;
-          const rangeMax = upper * 1.05;
-          const steps = 50;
-          const stepSize = (rangeMax - rangeMin) / steps;
-          for (let price = rangeMin; price <= rangeMax; price += stepSize) {
-            underlyingPrices.push(price);
-            let cumulativePayoff = 0;
-            if (optionType === 'call') {
-              chosenTicks.forEach(t => {
-                cumulativePayoff += Math.max(price - t.strike, 0) * t.usedLiquidity;
-              });
-            } else {
-              chosenTicks.forEach(t => {
-                cumulativePayoff += Math.max(t.strike - price, 0) * t.usedLiquidity;
-              });
-            }
-            payoffCurve.push(cumulativePayoff);
-          }
-          
-          document.getElementById('toggleChartBtn').style.display = "inline-block";
-          currentChartType = "PnL";
-          document.getElementById('toggleChartBtn').innerText = "Show Liquidity Chart";
-          renderPnLChart();
-          
-        } catch (error) {
-          console.error("Error fetching or processing data:", error);
-        }
-      });
-      
-      // Event Listeners for Trade Page
-      function fetchSpotPriceTrade(market) {
-        const url = marketConfigTrade[market].spotApi;
-        return fetch(url)
-          .then(res => res.json())
-          .then(data => parseFloat(data.markPrice))
-          .catch(err => {
-            console.error("Error fetching spot price (trade):", err);
-            return 0;
-          });
+        const quoteUrl = `https://api.stryke.xyz/clamm/purchase/quote?chainId=${chainId}&optionMarket=${optionMarket}&user=${userAddress}&strike=${spotPrice}&markPrice=${spotPrice}&type=call&amount=1&ttl=${ttl}`;
+        const response = await fetch(quoteUrl);
+        const data = await response.json();
+        const decimals = data.token.decimals;
+        return (parseFloat(data.premium) + parseFloat(data.fees || 0)) / Math.pow(10, decimals);
       }
       
-      document.getElementById('submitBtn').addEventListener('click', () => {
-        loadEarnPage(); // For demo purposes, calling the same function.
-      });
+      async function loadEarnPage() {
+        document.getElementById('loadingIndicator').classList.remove('hidden');
+        
+        const chainSelect = parseInt(document.getElementById('chainFilter').value);
+        const dexSelect = document.getElementById('dexFilter').value.toLowerCase();
+        const searchQuery = document.getElementById('poolSearch').value.toLowerCase();
+        let strategy = document.getElementById('strategyDropdown').value.toLowerCase();
+        
+        // Map strategy to adjustment factor.
+        let factor = 1.0;
+        switch(strategy) {
+          case "passive": factor = 0.7; break;
+          case "wide": factor = 0.85; break;
+          case "narrow": factor = 0.925; break;
+          case "aggressive": factor = 0.98; break;
+          case "insane": factor = 1.0; break;
+        }
+        
+        if (dexSelect !== "shadow") {
+          document.getElementById('poolsTableBody').innerHTML = "";
+          document.getElementById('totalTVL').innerText = "-";
+          document.getElementById('totalVolume').innerText = "-";
+          document.getElementById('loadingIndicator').classList.add('hidden');
+          return;
+        }
+        
+        const [strykeData, shadowData] = await Promise.all([
+          fetchStrykeLPData(),
+          fetchShadowData()
+        ]);
+        console.log("Stryke raw data:", strykeData);
+        console.log("Shadow raw data (pairs):", shadowData);
+        
+        let pools = strykeData.filter(pool => pool.chainId === chainSelect);
+        if (searchQuery) {
+          pools = pools.filter(pool =>
+            pool.ticker.toLowerCase().includes(searchQuery) ||
+            pool.pairName.toLowerCase().includes(searchQuery)
+          );
+        }
+        
+        let matchedPools = [];
+        pools.forEach(strykePool => {
+          const bestShadow = chooseBestShadowPool(strykePool, shadowData);
+          if (bestShadow) {
+            matchedPools.push({ stryke: strykePool, shadow: bestShadow });
+          }
+        });
+        console.log("matchedPools:", matchedPools);
+        
+        let totalTVL = 0, totalVol = 0;
+        matchedPools.forEach(mp => {
+          totalTVL += (mp.stryke.totalLiquidity || 0);
+          totalVol += (mp.stryke.volume24h || 0);
+        });
+        document.getElementById('totalTVL').innerText = formatNumber(totalTVL);
+        document.getElementById('totalVolume').innerText = formatNumber(totalVol);
+        
+        const tableRows = await Promise.all(matchedPools.map(async mp => {
+          let ticker = mp.stryke.ticker.toLowerCase();
+          let marketType = ticker.includes("weth") ? "WETH" : "wS";
+          const poolMarketConfig = marketConfig[chainSelect.toString()][marketType] || marketConfig[chainSelect.toString()].wS;
+          let spotPrice = await fetchSpotPrice(poolMarketConfig.spotApi);
+          let optionMarketAddress = mp.stryke.address;
+          let totalCostDaily = await fetchAtmPremium(chainSelect, optionMarketAddress, spotPrice, 86400);
+          let utilApr100 = (totalCostDaily * 365 * 100).toFixed(2);
+          let impliedDaily = (totalCostDaily * 100).toFixed(2);
+          
+          // Calculate APR values using the strategy factor:
+          let apr100 = parseFloat(utilApr100);
+          let aprAdjusted = (apr100 * factor).toFixed(2);
+          
+          // Based on currentMetrics, decide primary vs secondary values.
+          let primaryTVL, secondaryTVL, primaryAPR, secondaryAPR, tvlTooltip, aprTooltip;
+          // For TVL, always: primary = Stryke TVL and secondary = Shadow TVL if options, swapped for swaps.
+          let strykeTVL = formatNumber(mp.stryke.totalLiquidity);
+          let dexTVL = formatNumber(mp.shadow.totalValueLockedUSD ? parseFloat(mp.shadow.totalValueLockedUSD) : (mp.shadow.tvl ? parseFloat(mp.shadow.tvl) : 0));
+          if (currentMetrics === "options") {
+            primaryTVL = strykeTVL;
+            secondaryTVL = dexTVL;
+            primaryAPR = utilApr100;
+            secondaryAPR = aprAdjusted;
+            tvlTooltip = "Stryke TVL: <span class='text-white'>" + strykeTVL + "</span><br>Shadow TVL: <span class='text-blue-400'>"+ dexTVL + "</span>";
+            aprTooltip = "Stryke APR (100% Utilization): <span class='text-white'>" + utilApr100 + "%</span><br>Shadow APR (0% Utilization): <span class='text-blue-400'>" + aprAdjusted + "%</span>";
+          } else {
+            primaryTVL = dexTVL;
+            secondaryTVL = strykeTVL;
+            primaryAPR = aprAdjusted;
+            secondaryAPR = utilApr100;
+            tvlTooltip = "Shadow TVL: <span class='text-blue-400'>" + dexTVL + "</span><br>Stryke TVL: <span class='text-white'>" + strykeTVL + "</span>";
+            aprTooltip = "Shadow APR (0% Utilization): <span class='text-blue-400'>" + aprAdjusted + "%</span><br>Stryke APR (100% Utilization): <span class='text-white'>" + utilApr100 + "%</span>";
+          }
+          
+          let assetIcon = ticker.includes("weth")
+            ? '<img src="https://www.stryke.xyz/images/tokens/weth.svg" alt="WETH" class="inline-block mr-2 rounded-full shadow-sm" />'
+            : '<img src="https://www.stryke.xyz/images/tokens/ws.svg" alt="WS" class="inline-block mr-2 rounded-full shadow-sm" />';
+          
+          let rewardsText = "";
+          if(marketType === "weth"){
+            rewardsText = "<ul class='list-disc pl-4'><li class='text-neonGreen'>4–8x Sonic Points</li><li class='text-bullishGreen'>1x Gem Points</li></ul>";
+          } else {
+            rewardsText = "<ul class='list-disc pl-4'><li class='text-neonGreen'>4–8x Sonic Points</li><li class='text-bullishGreen'>2x Gem Points</li></ul>";
+          }
+          
+          return {
+            poolName: assetIcon + mp.stryke.ticker,
+            primaryTVL: primaryTVL,
+            secondaryTVL: secondaryTVL,
+            tvlTooltip: tvlTooltip,
+            primaryAPR: primaryAPR,
+            secondaryAPR: secondaryAPR,
+            aprTooltip: aprTooltip,
+            rewardsText: rewardsText,
+            impliedDaily: impliedDaily
+          };
+        }));
+        
+        const tbody = document.getElementById('poolsTableBody');
+        tbody.innerHTML = "";
+        tableRows.forEach(row => {
+          const tr = document.createElement('tr');
+          tr.classList.add("hover:bg-gray-300", "dark:hover:bg-gray-700", "transition-colors", "duration-200");
+          tr.innerHTML = `
+            <td class="px-4 py-2">${row.poolName}</td>
+            <td class="px-4 py-2" data-tippy-content="${row.tvlTooltip}">
+              <div class="primary-value">${row.primaryTVL}</div>
+              <div class="secondary-value">${row.secondaryTVL}</div>
+            </td>
+            <td class="px-4 py-2" data-tippy-content="${row.aprTooltip}">
+              <div class="primary-value">${row.primaryAPR}%</div>
+              <div class="secondary-value">${row.secondaryAPR}%</div>
+            </td>
+            <td class="px-4 py-2" data-tippy-content="${row.rewardsText}">
+              ${row.rewardsText ? "♦" : ""}
+            </td>
+            <td class="px-4 py-2" data-tippy-content="Implied Daily Move: ${row.impliedDaily}%">
+              ${row.impliedDaily}%
+            </td>
+            <td class="px-4 py-2 flex items-center space-x-2">
+              <button class="btn-3d px-3 py-1 text-sm font-medium">Trade</button>
+              <button class="btn-3d px-3 py-1 text-sm font-medium">Deposit</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+        
+        setTimeout(() => {
+          tippy('[data-tippy-content]', { allowHTML: true, theme: 'light-border', animation: 'shift-away', delay: [100, 100] });
+          document.getElementById('loadingIndicator').classList.add('hidden');
+        }, 150);
+      }
+      
+      document.getElementById('chainFilter').addEventListener('change', loadEarnPage);
+      document.getElementById('dexFilter').addEventListener('change', loadEarnPage);
+      document.getElementById('poolSearch').addEventListener('input', loadEarnPage);
+      document.getElementById('strategyDropdown').addEventListener('change', loadEarnPage);
+      
+      function showSkeleton() {
+        const tbody = document.getElementById('poolsTableBody');
+        tbody.innerHTML = "";
+        for (let i = 0; i < 5; i++) {
+          const tr = document.createElement('tr');
+          tr.classList.add("animate-pulse");
+          tr.innerHTML = `
+            <td class="px-4 py-2 bg-gray-400 dark:bg-gray-600 rounded"></td>
+            <td class="px-4 py-2 bg-gray-400 dark:bg-gray-600 rounded"></td>
+            <td class="px-4 py-2 bg-gray-400 dark:bg-gray-600 rounded"></td>
+            <td class="px-4 py-2 bg-gray-400 dark:bg-gray-600 rounded"></td>
+            <td class="px-4 py-2 bg-gray-400 dark:bg-gray-600 rounded"></td>
+            <td class="px-4 py-2 bg-gray-400 dark:bg-gray-600 rounded"></td>
+          `;
+          tbody.appendChild(tr);
+        }
+      }
+      
+      if (!document.getElementById('loadingIndicator')) {
+        const loadingIndicator = document.createElement('div');
+        loadingIndicator.id = "loadingIndicator";
+        loadingIndicator.className = "flex items-center justify-center py-4";
+        loadingIndicator.innerHTML = `
+          <svg class="animate-spin h-6 w-6 text-neonGreen mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+          <span class="text-lg font-medium">Updating...</span>
+        `;
+        document.querySelector("#poolsTable").parentElement.insertBefore(loadingIndicator, document.querySelector("#poolsTable"));
+        loadingIndicator.classList.add('hidden');
+      }
+      
+      loadEarnPage();
     </script>
   </body>
 </html>
