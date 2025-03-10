@@ -1,0 +1,1680 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Stryke.xyz - Trade</title>
+    <!-- Import Inter Font -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js & chartjs-plugin-annotation -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.1.0"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            fontFamily: { sans: ["Inter", "sans-serif"] },
+            colors: {
+              primary: "#FBBF24",
+              bullishGreen: "#2ecc71",
+              neonGreen: "#0FFF95",
+              lightOrange: "#FDBA74"
+            },
+            backgroundImage: {
+              "grain-light":
+                "url('https://www.transparenttextures.com/patterns/dark-matter.png')"
+            },
+            boxShadow: {
+              card: "0 4px 6px rgba(0,0,0,0.1)",
+              "3d": "0 10px 30px rgba(0,0,0,0.6)"
+            }
+          }
+        }
+      };
+    </script>
+    <style>
+      /* Neumorphic Sunken Effect for Inputs */
+      .neumorphic-sunken {
+        background: #e0e0e0;
+        border-radius: 0.375rem;
+        box-shadow: inset 5px 5px 10px rgba(0,0,0,0.2),
+          inset -5px -5px 10px rgba(255,255,255,0.7);
+        color: #fff;
+      }
+      .dark .neumorphic-sunken {
+        background: #1F1F1F;
+        box-shadow: inset 5px 5px 10px rgba(0,0,0,0.9),
+          inset -5px -5px 10px rgba(50,50,50,0.7);
+        color: #fff;
+      }
+      /* 3D Effect for Buttons */
+      .btn-3d {
+        background: linear-gradient(145deg, #2ecc71, #0FFF95);
+        box-shadow: 5px 5px 10px rgba(0,0,0,0.2),
+          -3px -3px 6px rgba(255,255,255,0.8),
+          inset 2px 2px 4px rgba(255,255,255,0.5),
+          inset -3px -3px 5px rgba(0,0,0,0.2);
+        border: none;
+        border-radius: 0.375rem;
+        color: black;
+      }
+      .btn-3d:active {
+        box-shadow: inset 5px 5px 10px rgba(0,0,0,0.3),
+          inset -3px -3px 6px rgba(255,255,255,0.8);
+        background: linear-gradient(145deg, #0FFF95, #2ecc71);
+      }
+      .dark .btn-3d {
+        background: linear-gradient(145deg, #2ecc71, #0FFF95);
+        box-shadow: 5px 5px 10px rgba(0,0,0,0.5),
+          -3px -3px 6px rgba(0,0,0,0.4),
+          inset 2px 2px 4px rgba(0,0,0,0.6),
+          inset -3px -3px 5px rgba(0,0,0,0.5);
+        color: black;
+      }
+      .dark .btn-3d:active {
+        box-shadow: inset 5px 5px 10px rgba(0,0,0,0.7),
+          inset -3px -3px 6px rgba(0,0,0,0.6);
+        background: linear-gradient(145deg, #0FFF95, #2ecc71);
+      }
+      /* 3D Effect for Dropdown Selectors */
+      .select-3d {
+        background: linear-gradient(145deg, #e5e7eb, #d1d5db);
+        box-shadow: 5px 5px 10px rgba(0,0,0,0.2),
+          -3px -3px 6px rgba(255,255,255,0.8),
+          inset 2px 2px 4px rgba(255,255,255,0.5),
+          inset -3px -3px 5px rgba(0,0,0,0.2);
+        border: none;
+        color: #fff;
+      }
+      .dark .select-3d {
+        background: linear-gradient(145deg, #2e2e2e, #1A1A1A);
+        box-shadow: 5px 5px 10px rgba(0,0,0,0.5),
+          -3px -3px 6px rgba(0,0,0,0.4),
+          inset 2px 2px 4px rgba(0,0,0,0.6),
+          inset -3px -3px 5px rgba(0,0,0,0.5);
+        color: #fff;
+      }
+      /* 3D Effect for Table Headers */
+      .table-3d th {
+        background: linear-gradient(145deg, #e5e7eb, #d1d5db);
+        box-shadow: 2px 2px 4px rgba(0,0,0,0.2), inset -2px -2px 4px rgba(255,255,255,0.5);
+        color: black;
+      }
+      .dark .table-3d th {
+        background: linear-gradient(145deg, #2e2e2e, #1A1A1A);
+        box-shadow: 2px 2px 4px rgba(0,0,0,0.5), inset -2px -2px 4px rgba(0,0,0,0.3);
+        color: white;
+      }
+      /* Dual-line styling for cell values */
+      .primary-value {
+        font-size: 1rem;
+        font-weight: 600;
+      }
+      .secondary-value {
+        font-size: 0.75rem;
+        color: rgba(107,114,128,0.8);
+      }
+      .dark .secondary-value {
+        color: rgba(156,163,175,0.8);
+      }
+      /* Log Button */
+      .log-button {
+        font-size: 0.75rem;
+        color: #fff;
+        border: none;
+        background: none;
+        cursor: pointer;
+        transition: color 0.2s;
+      }
+      .log-button.active {
+        color: #0FFF95;
+      }
+      /* 3-Way Toggle Styles */
+      .threeway-toggle {
+        display: inline-flex;
+        border: 1px solid #4B5563;
+        border-radius: 0.375rem;
+        overflow: hidden;
+        margin-bottom: 0.5rem;
+      }
+      .threeway-toggle button {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+        background-color: transparent;
+        color: #D1D5DB;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.2s, color 0.2s;
+      }
+      .threeway-toggle button.active {
+        background-color: #0FFF95;
+        color: black;
+      }
+      .threeway-toggle button:not(:last-child) {
+        border-right: 1px solid #4B5563;
+      }
+      /* Control Labels */
+      .control-label {
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: #fff;
+      }
+      /* Table Overrides for Dark Mode */
+      table#liquidityTable td {
+        background-color: #1a1a1a !important;
+        color: #fff !important;
+        border: 1px solid #444 !important;
+        padding: 8px !important;
+      }
+      table#liquidityTable th {
+        background-color: transparent !important;
+        color: #ffcc00 !important;
+        border: 1px solid #444 !important;
+        padding: 8px !important;
+      }
+      /* Zoom Presets Button Styles */
+      .zoom-preset-btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+        border: 1px solid #4B5563;
+        border-radius: 0.375rem;
+        margin-right: 0.5rem;
+        cursor: pointer;
+        background-color: transparent;
+        color: #D1D5DB;
+        transition: background-color 0.2s, color 0.2s;
+      }
+      .zoom-preset-btn.active {
+        background-color: #0FFF95;
+        color: black;
+      }
+      /* Ensure dark-mode dropdown text is visible */
+      input.neumorphic-sunken, .select-3d { color: #fff; }
+    </style>
+  </head>
+  <body class="font-sans bg-grain-light dark:bg-[#1F1F1F] bg-cover bg-center bg-no-repeat transition-colors duration-300 min-h-screen">
+    <!-- Top Navigation Bar -->
+    <header class="bg-[#1A1A1A] shadow-3d z-50 relative">
+      <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+          <img src="https://www.stryke.xyz/images/brand/logo.ico" alt="Stryke Logo" class="w-10 h-10 rounded-full" />
+          <nav class="flex items-center space-x-6 text-sm">
+            <a href="trade.html" class="text-neonGreen font-bold transition border-b-2 border-neonGreen">Trade</a>
+            <a href="earn.html" class="text-white hover:opacity-80 transition">Earn</a>
+          </nav>
+        </div>
+        <button id="modeToggle" class="p-2 transition transform hover:scale-105 focus:outline-none">
+          <svg id="sunIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-400 dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 3v1m0 16v1m8.66-9H21m-16 0H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M12 8a4 4 0 110 8 4 4 0 010-8z" />
+          </svg>
+          <svg id="moonIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-400 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+          </svg>
+        </button>
+      </div>
+    </header>
+    
+    <!-- Top Panel -->
+    <section id="liquidityChartSection" class="max-w-7xl mx-auto px-4 mt-6 mb-8 relative">
+      <div class="relative bg-gray-200 dark:bg-[#1A1A1A] rounded-lg shadow-3d p-4">
+        <!-- Product Type Toggle -->
+        <div class="flex items-center mb-2" id="productTypeToggleContainer">
+          <div class="threeway-toggle" id="productTypeToggle">
+            <button id="toggleSpot" class="disabled opacity-50 cursor-not-allowed">Spot</button>
+            <button id="toggleOptions" class="active">Options</button>
+            <button id="togglePerp">Perp</button>
+          </div>
+        </div>
+        <!-- 3-Way Toggle for View Modes -->
+        <div class="flex items-center mb-2">
+          <div class="threeway-toggle">
+            <button id="toggleLiquidity" class="active">Liquidity</button>
+            <button id="toggleTable">Table</button>
+            <button id="togglePnL">PnL</button>
+          </div>
+        </div>
+        <!-- Trade Controls -->
+        <div class="flex flex-wrap items-center justify-between mb-4">
+          <!-- Options Controls -->
+          <div class="flex flex-wrap items-center space-x-4" id="tradeControlsOptions">
+            <div>
+              <label for="marketSelect" class="control-label">Market</label>
+              <select id="marketSelect" class="select-3d rounded-md text-base focus:ring focus:ring-green-400 transition w-36">
+                <option value="S">Sonic</option>
+                <option value="ETH">ETH</option>
+              </select>
+            </div>
+            <div>
+              <label for="expirySelect" class="control-label">Expiry</label>
+              <select id="expirySelect" class="select-3d rounded-md text-base focus:ring focus:ring-green-400 transition w-24">
+                <option value="3600">1h</option>
+                <option value="7200">2h</option>
+                <option value="21600">6h</option>
+                <option value="43200">12h</option>
+                <option value="86400" selected>24h</option>
+                <option value="604800">1w</option>
+              </select>
+            </div>
+            <div>
+              <label for="optionType" class="control-label">Option Type</label>
+              <select id="optionType" class="select-3d rounded-md text-base focus:ring focus:ring-green-400 transition w-28">
+                <option value="call">Call</option>
+                <option value="put">Put</option>
+                <option value="straddle" selected>Straddle</option>
+              </select>
+            </div>
+            <div>
+              <label for="minStrikeInput" class="control-label">Min Strike</label>
+              <input type="number" id="minStrikeInput" placeholder="Min Strike" class="neumorphic-sunken rounded-md text-base focus:outline-none focus:ring focus:ring-green-400 transition w-24" step="0.0001" />
+            </div>
+            <div>
+              <label for="maxStrikeInput" class="control-label">Max Strike</label>
+              <input type="number" id="maxStrikeInput" placeholder="Max Strike" class="neumorphic-sunken rounded-md text-base focus:outline-none focus:ring focus:ring-green-400 transition w-24" step="0.0001" />
+            </div>
+            <div>
+              <label for="tradeAmount" class="control-label">Amount</label>
+              <input type="number" id="tradeAmount" class="neumorphic-sunken rounded-md text-base focus:outline-none focus:ring focus:ring-green-400 transition w-24" step="any" value="1" />
+            </div>
+            <div class="flex flex-col space-y-1">
+              <button id="submitBtn" class="btn-3d py-2 px-4 text-base font-medium">Submit</button>
+            </div>
+          </div>
+          <!-- Perp Controls (initially hidden) -->
+          <div class="flex flex-wrap items-center space-x-4" id="tradeControlsPerp" style="display: none;">
+            <div>
+              <label for="marketSelectPerp" class="control-label">Market</label>
+              <select id="marketSelectPerp" class="select-3d rounded-md text-base focus:ring focus:ring-green-400 transition w-36">
+                <option value="S">Sonic</option>
+                <option value="ETH">ETH</option>
+              </select>
+            </div>
+            <div>
+              <label for="tradeAmountPerp" class="control-label">Amount</label>
+              <input type="number" id="tradeAmountPerp" class="neumorphic-sunken rounded-md text-base focus:outline-none focus:ring focus:ring-green-400 transition w-24" step="any" value="1" />
+            </div>
+            <div id="perpPositionToggle">
+              <label class="control-label">Position</label>
+              <div class="threeway-toggle">
+                <button id="toggleLong" class="active">Long</button>
+                <button id="toggleShort">Short</button>
+              </div>
+            </div>
+            <div class="flex flex-col space-y-1">
+              <button id="submitBtnPerp" class="btn-3d py-2 px-4 text-base font-medium">Submit</button>
+            </div>
+          </div>
+          <!-- Zoom Presets and Log Button -->
+          <div class="flex items-center">
+            <div class="flex items-center space-x-2">
+              <button class="zoom-preset-btn" data-preset="full">Full</button>
+              <button class="zoom-preset-btn" data-preset="50">50%</button>
+              <button class="zoom-preset-btn" data-preset="25">25%</button>
+              <button class="zoom-preset-btn" data-preset="10">10%</button>
+            </div>
+            <button id="logButton" class="log-button ml-4">Log</button>
+          </div>
+        </div>
+        <!-- Chart Container -->
+        <div id="topChartContainer"></div>
+      </div>
+    </section>
+    
+    <!-- Bottom View Card -->
+    <section id="bottomViewCard" class="max-w-7xl mx-auto px-4 mb-8">
+      <div class="bg-gray-200 dark:bg-[#1A1A1A] rounded-lg shadow-3d p-4">
+        <div id="bottomViewContainer"></div>
+      </div>
+    </section>
+    
+    <!-- Last Updated & Refresh -->
+    <div class="max-w-7xl mx-auto px-4 flex justify-end mt-2 items-center space-x-2">
+      <span id="lastUpdated" class="text-neonGreen text-sm">Last Updated: -- secs ago</span>
+      <button id="refreshButton" class="text-neonGreen text-xl focus:outline-none" title="Refresh Data">↻</button>
+    </div>
+    
+    <script>
+      /******************************************************
+       * GLOBAL VARIABLES & CONFIG
+       ******************************************************/
+      let totalLiquidityChartInstance = null;
+      let pnlChartInstance = null;
+      let tradeData = {};
+      let currentTopView = "Liquidity"; // "Liquidity", "Table", "PnL"
+      let currentProductType = "options"; // "options" or "perp"
+      let useLogScale = false;
+      let spotPriceGlobal = 0;
+      let lastUpdateTime = Date.now();
+      let rangeMin = 0;
+      let rangeMax = 0;
+      let globalMinTick = 0;
+      let globalMaxTick = 1;
+      let zoomPreset = null;
+      
+      // Global caches for liquidity data
+      window.liquidityLog = [];
+      window.processedLiquidityData = [];
+      
+      const marketConfig = {
+        S: {
+          optionMarket: "0x342e4068bA07bbCcBDDE503b2451FAa3D3C0278B",
+          spotApi: "https://api.stryke.xyz/uniswap-prices/mark-price?chainId=146&ticker=WS/USDC.e"
+        },
+        ETH: {
+          optionMarket: "0x9d3828e89Fadc4DEc77758988b388435Fe0f8DCa",
+          spotApi: "https://api.stryke.xyz/uniswap-prices/mark-price?chainId=146&ticker=WETH/USDC.e"
+        }
+      };
+      const intradayHook = "0x78d96C07B16d8f911c4cD14EE10601921E4fb8aF";
+      const weeklyHook = "0xf6314300b42B7D88c153348921a95d3CA95E74Bd";
+      
+      /******************************************************
+       * DRAGGABLE RANGE SELECTOR PLUGIN (For Options)
+       ******************************************************/
+      const draggableRangePlugin = {
+        id: "draggableRangePlugin",
+        draggingMin: false,
+        draggingMax: false,
+        afterInit(chart) {
+          const canvas = chart.canvas;
+          canvas.addEventListener("mousedown", (e) => this.handleMouseDown(e, chart));
+          canvas.addEventListener("mousemove", (e) => this.handleMouseMove(e, chart));
+          canvas.addEventListener("mouseup", (e) => this.handleMouseUp(e, chart));
+          canvas.addEventListener("mouseleave", (e) => this.handleMouseUp(e, chart));
+        },
+        afterDraw(chart) {
+          if (!chart.scales.x) return;
+          const { ctx, chartArea, scales: { x } } = chart;
+          ctx.save();
+          const overlayColor = document.documentElement.classList.contains("dark")
+            ? "rgba(200,200,200,0.3)"
+            : "rgba(0,0,0,0.3)";
+          const minX = x.getPixelForValue(rangeMin);
+          ctx.strokeStyle = "red";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(minX, chartArea.top);
+          ctx.lineTo(minX, chartArea.bottom);
+          ctx.stroke();
+          // Draw a circular drag handle below the min selector
+          ctx.beginPath();
+          ctx.arc(minX, chartArea.bottom - 5, 4, 0, 2 * Math.PI);
+          ctx.fillStyle = "white";
+          ctx.fill();
+          
+          const maxX = x.getPixelForValue(rangeMax);
+          ctx.beginPath();
+          ctx.moveTo(maxX, chartArea.top);
+          ctx.lineTo(maxX, chartArea.bottom);
+          ctx.stroke();
+          // Draw a circular drag handle below the max selector
+          ctx.beginPath();
+          ctx.arc(maxX, chartArea.bottom - 5, 4, 0, 2 * Math.PI);
+          ctx.fillStyle = "white";
+          ctx.fill();
+          
+          ctx.fillStyle = overlayColor;
+          ctx.fillRect(chartArea.left, chartArea.top, minX - chartArea.left, chartArea.bottom - chartArea.top);
+          ctx.fillRect(maxX, chartArea.top, chartArea.right - maxX, chartArea.bottom - chartArea.top);
+          
+          // Draw available liquidity text at the top
+          if (window.processedLiquidityData && window.processedLiquidityData.length) {
+            const liquidityInRange = window.processedLiquidityData
+              .filter(p => p.strike >= rangeMin && p.strike <= rangeMax)
+              .reduce((sum, p) => sum + p.avail, 0);
+            document.getElementById("tradeAmount").max = liquidityInRange;
+            const centerX = (minX + maxX) / 2;
+            const centerY = chartArea.top + 14;
+            ctx.font = "bold 14px sans-serif";
+            ctx.fillStyle = "white";
+            ctx.textAlign = "center";
+            ctx.fillText("Avail: " + formatNumber(liquidityInRange) + " USD", centerX, centerY);
+          }
+          ctx.restore();
+        },
+        handleMouseDown(e, chart) {
+          const pos = this.getRelativePosition(e, chart);
+          const xScale = chart.scales.x;
+          const minX = xScale.getPixelForValue(rangeMin);
+          const maxX = xScale.getPixelForValue(rangeMax);
+          const threshold = 6;
+          if (Math.abs(pos.x - minX) < threshold) {
+            this.draggingMin = true;
+          } else if (Math.abs(pos.x - maxX) < threshold) {
+            this.draggingMax = true;
+          }
+        },
+        handleMouseMove(e, chart) {
+          if (!this.draggingMin && !this.draggingMax) return;
+          const pos = this.getRelativePosition(e, chart);
+          const xScale = chart.scales.x;
+          let val = xScale.getValueForPixel(pos.x);
+          val = Math.round(val * 10000) / 10000;
+          val = Math.max(val, xScale.min);
+          val = Math.min(val, xScale.max);
+          const optType = document.getElementById("optionType").value;
+          if (optType === "call") {
+            if (this.draggingMin) {
+              val = Math.max(val, spotPriceGlobal);
+              val = Math.min(val, rangeMax - 0.0001);
+            }
+            if (this.draggingMax) {
+              val = Math.min(val, globalMaxTick);
+              val = Math.max(val, rangeMin + 0.0001);
+            }
+          } else if (optType === "put") {
+            if (this.draggingMin) {
+              val = Math.max(val, globalMinTick);
+              val = Math.min(val, rangeMax - 0.0001, spotPriceGlobal - 0.0001);
+            }
+            if (this.draggingMax) {
+              val = Math.min(val, spotPriceGlobal);
+              val = Math.max(val, rangeMin + 0.0001);
+            }
+          } else if (optType === "straddle") {
+            if (this.draggingMin) {
+              val = Math.min(val, spotPriceGlobal, rangeMax - 0.0001);
+            }
+            if (this.draggingMax) {
+              val = Math.max(val, spotPriceGlobal, rangeMin + 0.0001);
+            }
+          }
+          if (this.draggingMin) {
+            rangeMin = val;
+            document.getElementById("minStrikeInput").value = rangeMin.toFixed(4);
+          }
+          if (this.draggingMax) {
+            rangeMax = val;
+            document.getElementById("maxStrikeInput").value = rangeMax.toFixed(4);
+          }
+          chart.update("none");
+        },
+        handleMouseUp(e, chart) {
+          this.draggingMin = false;
+          this.draggingMax = false;
+        },
+        getRelativePosition(e, chart) {
+          const rect = chart.canvas.getBoundingClientRect();
+          return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        }
+      };
+      
+      /******************************************************
+       * UTILITY FUNCTIONS
+       ******************************************************/
+      function destroyTotalLiquidityChart() {
+        if (totalLiquidityChartInstance instanceof Chart) {
+          totalLiquidityChartInstance.destroy();
+        }
+      }
+      function destroyPnLChart() {
+        if (pnlChartInstance instanceof Chart) {
+          pnlChartInstance.destroy();
+        }
+      }
+      function formatNumber(num) {
+        return parseFloat(num).toLocaleString(undefined, { maximumFractionDigits: 2 });
+      }
+      
+      /******************************************************
+       * ZOOM PRESET FUNCTIONS
+       ******************************************************/
+      function setZoomPreset(preset) {
+        if (currentProductType === "options") {
+          document.getElementById("minStrikeInput").value = (spotPriceGlobal * 0.95).toFixed(4);
+          document.getElementById("maxStrikeInput").value = (spotPriceGlobal * 1.05).toFixed(4);
+          rangeMin = spotPriceGlobal * 0.95;
+          rangeMax = spotPriceGlobal * 1.05;
+        }
+        if (preset === "full") {
+          zoomPreset = null;
+        } else if (preset === "50") {
+          zoomPreset = { min: spotPriceGlobal * 0.5, max: spotPriceGlobal * 1.5 };
+        } else if (preset === "25") {
+          zoomPreset = { min: spotPriceGlobal * 0.75, max: spotPriceGlobal * 1.25 };
+        } else if (preset === "10") {
+          zoomPreset = { min: spotPriceGlobal * 0.90, max: spotPriceGlobal * 1.10 };
+        }
+        updateTopPanelView();
+        document.querySelectorAll(".zoom-preset-btn").forEach(btn => btn.classList.remove("active"));
+        document.querySelector(`.zoom-preset-btn[data-preset="${preset}"]`)?.classList.add("active");
+      }
+      
+      /******************************************************
+       * RENDER LIQUIDITY CHART (Options)
+       ******************************************************/
+      async function renderLiquidityChart() {
+        const market = document.getElementById("marketSelect").value;
+        let ticks = await fetchLiquidityData(market);
+        const optionType = document.getElementById("optionType").value;
+        let processed = ticks.map(t => {
+          let avail = t.availableLiquidity;
+          let tot = t.totalLiquidity;
+          const symbol = t.tokenSymbol ? t.tokenSymbol.toLowerCase() : "";
+          if (symbol.includes("ws") || symbol.includes("weth")) {
+            avail *= spotPriceGlobal;
+            tot *= spotPriceGlobal;
+          }
+          return { strike: t.strike, avail, locked: tot - avail };
+        });
+        window.processedLiquidityData = processed;
+        const strikes = processed.map(p => p.strike);
+        const dataMin = Math.min(...strikes);
+        const dataMax = Math.max(...strikes);
+        let xMin = zoomPreset ? zoomPreset.min : dataMin;
+        let xMax = zoomPreset ? zoomPreset.max : dataMax;
+        const availableData = processed.map(p => ({ x: p.strike, y: p.avail }));
+        const lockedData = processed.map(p => ({ x: p.strike, y: p.locked }));
+        const container = document.getElementById("topChartContainer");
+        container.innerHTML = `<canvas id="liquidityChart" width="600" height="250"></canvas>`;
+        const ctx = document.getElementById("liquidityChart").getContext("2d");
+        destroyTotalLiquidityChart();
+        const annotationConfig = {
+          markPriceLine: {
+            type: "line",
+            mode: "vertical",
+            scaleID: "x",
+            value: spotPriceGlobal,
+            borderColor: "#85C1E9",
+            borderWidth: 2,
+            label: { enabled: true, content: "Mark Price", color: "#fff" }
+          }
+        };
+        totalLiquidityChartInstance = new Chart(ctx, {
+          type: "bar",
+          data: {
+            datasets: [
+              {
+                label: "Available Liquidity (USD)",
+                data: availableData,
+                backgroundColor: "rgba(15,255,149,0.8)",
+                stack: "liquidity",
+                barThickness: 2
+              },
+              {
+                label: "Locked Liquidity (USD)",
+                data: lockedData,
+                backgroundColor: "rgba(255,99,132,0.8)",
+                stack: "liquidity",
+                barThickness: 2
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            parsing: false,
+            plugins: {
+              tooltip: {
+                callbacks: { label: ctx => ctx.dataset.label + ": " + formatNumber(ctx.parsed.y) }
+              },
+              legend: { labels: { color: "#fff" } },
+              annotation: { annotations: annotationConfig }
+            },
+            scales: {
+              x: {
+                type: "linear",
+                position: "bottom",
+                min: xMin,
+                max: xMax,
+                ticks: { color: "#fff", callback: val => parseFloat(val).toFixed(2) },
+                grid: { color: "rgba(255,255,255,0.1)" }
+              },
+              y: {
+                type: useLogScale ? "logarithmic" : "linear",
+                min: useLogScale ? 1 : 0,
+                stacked: true,
+                ticks: { color: "#fff" },
+                grid: { color: "rgba(255,255,255,0.1)" }
+              }
+            }
+          },
+          plugins: [draggableRangePlugin]
+        });
+      }
+      
+      /******************************************************
+       * RENDER PnL CHART (Options)
+       ******************************************************/
+      function renderPnLChart() {
+        const container = document.getElementById("topChartContainer");
+        container.innerHTML = `<canvas id="topChartCanvas" width="600" height="250"></canvas>`;
+        const ctx = document.getElementById("topChartCanvas").getContext("2d");
+        destroyPnLChart();
+        let annotations = {
+          markPriceLine: {
+            type: "line",
+            mode: "vertical",
+            scaleID: "x",
+            value: spotPriceGlobal,
+            borderColor: "#85C1E9",
+            borderWidth: 2,
+            label: { enabled: true, content: "Mark Price", color: "#fff" }
+          },
+          premiumLine: {
+            type: "line",
+            mode: "horizontal",
+            scaleID: "y",
+            value: tradeData.totalPremium || 0,
+            borderColor: "green",
+            borderWidth: 2,
+            label: { enabled: true, content: "Total Premium", color: "#fff" }
+          }
+        };
+        if (tradeData.optionType === "straddle") {
+          if (tradeData.callExposureStrike != null) {
+            annotations.callExposureLine = {
+              type: "line",
+              mode: "vertical",
+              scaleID: "x",
+              value: tradeData.callExposureStrike,
+              borderColor: "orange",
+              borderWidth: 2,
+              label: { enabled: true, content: "Call Exposure Filled", color: "#fff" }
+            };
+          }
+          if (tradeData.putExposureStrike != null) {
+            annotations.putExposureLine = {
+              type: "line",
+              mode: "vertical",
+              scaleID: "x",
+              value: tradeData.putExposureStrike,
+              borderColor: "purple",
+              borderWidth: 2,
+              label: { enabled: true, content: "Put Exposure Filled", color: "#fff" }
+            };
+          }
+        } else {
+          annotations.exposureLine = {
+            type: "line",
+            mode: "vertical",
+            scaleID: "x",
+            value: tradeData.exposureStrike,
+            borderColor: "orange",
+            borderWidth: 2,
+            label: { enabled: true, content: "Exposure Filled", color: "#fff" }
+          };
+        }
+        pnlChartInstance = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels: tradeData.underlyingPrices || [],
+            datasets: [{
+              label: "Cumulative Payoff",
+              data: tradeData.payoffCurve || [],
+              borderColor: "#ffcc00",
+              fill: false,
+              tension: 0.2
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    return context.dataset.label + ": " + context.parsed.y.toFixed(4);
+                  }
+                }
+              },
+              legend: { labels: { color: "#fff" } },
+              annotation: { annotations: annotations }
+            },
+            scales: {
+              x: {
+                type: "linear",
+                position: "bottom",
+                title: { display: true, text: "Price", color: "#ffcc00" },
+                min: tradeData.underlyingPrices ? tradeData.underlyingPrices[0] : 0,
+                max: tradeData.underlyingPrices ? tradeData.underlyingPrices[tradeData.underlyingPrices.length - 1] : 1,
+                ticks: { color: "#fff", callback: value => parseFloat(value).toFixed(2) },
+                grid: { color: "rgba(255,255,255,0.2)" }
+              },
+              y: {
+                beginAtZero: true,
+                title: { display: true, text: "Cumulative Payoff", color: "#ffcc00" },
+                ticks: { color: "#fff" },
+                grid: { color: "rgba(255,255,255,0.2)" }
+              }
+            }
+          }
+        });
+      }
+      
+      /******************************************************
+       * LOAD TRADE PAGE (Options)
+       ******************************************************/
+      async function loadTradePage() {
+        lastUpdateTime = Date.now();
+        const marketChoice = document.getElementById("marketSelect").value;
+        const ttlSeconds = parseInt(document.getElementById("expirySelect").value);
+        let optionType = document.getElementById("optionType").value;
+        const tradeAmount = parseFloat(document.getElementById("tradeAmount").value);
+        const userAddress = "0xf8859BAae87Eac4C7EE0b81499eDDD99c778FBEB";
+        const optionMarket = marketConfig[marketChoice]
+          ? marketConfig[marketChoice].optionMarket
+          : marketConfig["S"].optionMarket;
+        spotPriceGlobal = await fetchSpotPrice(marketChoice);
+        
+        // Reset selectors to -5%/+5%
+        document.getElementById("minStrikeInput").value = (spotPriceGlobal * 0.95).toFixed(4);
+        document.getElementById("maxStrikeInput").value = (spotPriceGlobal * 1.05).toFixed(4);
+        rangeMin = spotPriceGlobal * 0.95;
+        rangeMax = spotPriceGlobal * 1.05;
+        
+        let tradeAmountCall = tradeAmount;
+        let tradeAmountPut = tradeAmount;
+        let chosenCall = [];
+        let chosenPut = [];
+        if (optionType === "straddle") {
+          tradeAmountCall = tradeAmountPut = tradeAmount / 2;
+        }
+        
+        const liquidityUrl = `https://api.stryke.xyz/clamm/strikes-chain?chainId=146&optionMarket=${optionMarket}&callsReach=800&putsReach=800&filterDeprecated=true`;
+        try {
+          const liquidityResponse = await fetch(liquidityUrl);
+          const liquidityData = await liquidityResponse.json();
+          let allTicks = [];
+          liquidityData.forEach(item => {
+            for (let key in item) {
+              const data = item[key][0];
+              const decimals = data.token.decimals;
+              const scaledAvail =
+                parseFloat(data.meta.availableTokenLiquidity) / Math.pow(10, decimals);
+              const scaledTotal =
+                parseFloat(data.meta.totalTokenLiquidity) / Math.pow(10, decimals);
+              allTicks.push({
+                strike: parseFloat(key),
+                availableLiquidity: scaledAvail,
+                totalLiquidity: scaledTotal,
+                tokenSymbol: data.token.symbol,
+                hook: data.meta.hook
+              });
+            }
+          });
+          window.liquidityLog = allTicks;
+          
+          let allowedHooks =
+            ttlSeconds < 604800
+              ? [intradayHook.toLowerCase(), weeklyHook.toLowerCase()]
+              : [weeklyHook.toLowerCase()];
+          let filteredTicksCall = [];
+          let filteredTicksPut = [];
+          if (optionType === "call" || optionType === "straddle") {
+            filteredTicksCall = window.liquidityLog
+              .filter(
+                tick =>
+                  tick.strike >=
+                    Math.max(parseFloat(document.getElementById("minStrikeInput").value), spotPriceGlobal) &&
+                  (tick.tokenSymbol.toLowerCase().includes("ws") ||
+                    tick.tokenSymbol.toLowerCase().includes("weth")) &&
+                  allowedHooks.includes(tick.hook.toLowerCase())
+              )
+              .sort((a, b) => a.strike - b.strike);
+          }
+          if (optionType === "put" || optionType === "straddle") {
+            filteredTicksPut = window.liquidityLog
+              .filter(
+                tick =>
+                  tick.strike <=
+                    Math.min(parseFloat(document.getElementById("maxStrikeInput").value), spotPriceGlobal) &&
+                  tick.tokenSymbol.toLowerCase().includes("usdc") &&
+                  allowedHooks.includes(tick.hook.toLowerCase())
+              )
+              .sort((a, b) => b.strike - a.strike);
+          }
+          
+          if (optionType === "straddle") {
+            let cumulativeCall = 0;
+            for (let i = 0; i < filteredTicksCall.length; i++) {
+              if (cumulativeCall >= tradeAmountCall) break;
+              let tick = { ...filteredTicksCall[i] };
+              let needed = tradeAmountCall - cumulativeCall;
+              if (tick.availableLiquidity >= needed) {
+                tick.usedLiquidity = needed;
+                cumulativeCall += needed;
+              } else {
+                tick.usedLiquidity = tick.availableLiquidity;
+                cumulativeCall += tick.availableLiquidity;
+              }
+              chosenCall.push(tick);
+            }
+            let cumulativePut = 0;
+            for (let i = 0; i < filteredTicksPut.length; i++) {
+              if (cumulativePut >= tradeAmountPut) break;
+              let tick = { ...filteredTicksPut[i] };
+              let needed = tradeAmountPut - cumulativePut;
+              if (tick.availableLiquidity >= needed) {
+                tick.usedLiquidity = needed;
+                cumulativePut += needed;
+              } else {
+                tick.usedLiquidity = tick.availableLiquidity;
+                cumulativePut += tick.availableLiquidity;
+              }
+              chosenPut.push(tick);
+            }
+            tradeData.chosenTicksCalls = chosenCall;
+            tradeData.chosenTicksPuts = chosenPut;
+            tradeData.callExposureStrike = chosenCall.length > 0 ? chosenCall[chosenCall.length - 1].strike : null;
+            tradeData.putExposureStrike = chosenPut.length > 0 ? chosenPut[chosenPut.length - 1].strike : null;
+          } else if (optionType === "call") {
+            let cumulativeCall = 0;
+            for (let i = 0; i < filteredTicksCall.length; i++) {
+              if (cumulativeCall >= tradeAmount) break;
+              let tick = { ...filteredTicksCall[i] };
+              let needed = tradeAmount - cumulativeCall;
+              if (tick.availableLiquidity >= needed) {
+                tick.usedLiquidity = needed;
+                cumulativeCall += needed;
+              } else {
+                tick.usedLiquidity = tick.availableLiquidity;
+                cumulativeCall += tick.availableLiquidity;
+              }
+              chosenCall.push(tick);
+            }
+            tradeData.chosenTicks = chosenCall;
+            tradeData.exposureStrike = chosenCall[chosenCall.length - 1].strike;
+          } else if (optionType === "put") {
+            let cumulativePut = 0;
+            for (let i = 0; i < filteredTicksPut.length; i++) {
+              if (cumulativePut >= tradeAmount) break;
+              let tick = { ...filteredTicksPut[i] };
+              let needed = tradeAmount - cumulativePut;
+              if (tick.availableLiquidity >= needed) {
+                tick.usedLiquidity = needed;
+                cumulativePut += needed;
+              } else {
+                tick.usedLiquidity = tick.availableLiquidity;
+                cumulativePut += tick.availableLiquidity;
+              }
+              chosenPut.push(tick);
+            }
+            tradeData.chosenTicks = chosenPut;
+            tradeData.exposureStrike = chosenPut[chosenPut.length - 1].strike;
+          }
+          
+          // Fetch premiums:
+          const premiumPromises = [];
+          if (optionType === "straddle") {
+            chosenCall.forEach(tick => {
+              const tickQuoteUrl = `https://api.stryke.xyz/clamm/purchase/quote?chainId=146&optionMarket=${optionMarket}&user=${userAddress}&strike=${tick.strike}&markPrice=${spotPriceGlobal}&type=call&amount=${tick.usedLiquidity}&ttl=${ttlSeconds}`;
+              premiumPromises.push(
+                fetch(tickQuoteUrl)
+                  .then(res => res.json())
+                  .then(data => {
+                    const decimals = data.token.decimals;
+                    return (parseFloat(data.premium) + parseFloat(data.fees || 0)) / Math.pow(10, decimals);
+                  })
+                  .catch(err => {
+                    console.error("Error fetching premium for tick", tick.strike, err);
+                    return 0;
+                  })
+              );
+            });
+            chosenPut.forEach(tick => {
+              const tickQuoteUrl = `https://api.stryke.xyz/clamm/purchase/quote?chainId=146&optionMarket=${optionMarket}&user=${userAddress}&strike=${tick.strike}&markPrice=${spotPriceGlobal}&type=put&amount=${tick.usedLiquidity}&ttl=${ttlSeconds}`;
+              premiumPromises.push(
+                fetch(tickQuoteUrl)
+                  .then(res => res.json())
+                  .then(data => {
+                    const decimals = data.token.decimals;
+                    return (parseFloat(data.premium) + parseFloat(data.fees || 0)) / Math.pow(10, decimals);
+                  })
+                  .catch(err => {
+                    console.error("Error fetching premium for tick", tick.strike, err);
+                    return 0;
+                  })
+              );
+            });
+          } else {
+            tradeData.chosenTicks.forEach(tick => {
+              const qType = optionType;
+              const tickQuoteUrl = `https://api.stryke.xyz/clamm/purchase/quote?chainId=146&optionMarket=${optionMarket}&user=${userAddress}&strike=${tick.strike}&markPrice=${spotPriceGlobal}&type=${qType}&amount=${tick.usedLiquidity}&ttl=${ttlSeconds}`;
+              premiumPromises.push(
+                fetch(tickQuoteUrl)
+                  .then(res => res.json())
+                  .then(data => {
+                    const decimals = data.token.decimals;
+                    return (parseFloat(data.premium) + parseFloat(data.fees || 0)) / Math.pow(10, decimals);
+                  })
+                  .catch(err => {
+                    console.error("Error fetching premium for tick", tick.strike, err);
+                    return 0;
+                  })
+              );
+            });
+          }
+          const chosenPremiums = await Promise.all(premiumPromises);
+          if (optionType === "straddle") {
+            let idx = 0;
+            chosenCall.forEach(tick => {
+              tick.premiumCost = chosenPremiums[idx++];
+            });
+            chosenPut.forEach(tick => {
+              tick.premiumCost = chosenPremiums[idx++];
+            });
+          } else {
+            tradeData.chosenTicks.forEach((tick, idx) => {
+              tick.premiumCost = chosenPremiums[idx];
+            });
+          }
+          
+          // Compute cumulative payoff curve:
+          let prices = [];
+          let payoffCurve = [];
+          if (optionType === "straddle") {
+            let callStrikes = chosenCall.length > 0 ? chosenCall.map(t => t.strike) : [spotPriceGlobal];
+            let putStrikes = chosenPut.length > 0 ? chosenPut.map(t => t.strike) : [spotPriceGlobal];
+            let lowTick = Math.min(...callStrikes, ...putStrikes);
+            let highTick = Math.max(...callStrikes, ...putStrikes);
+            const steps = 50;
+            const stepSize = (highTick * 1.05 - lowTick * 0.95) / steps;
+            for (let p = lowTick * 0.95; p <= highTick * 1.05; p += stepSize) {
+              prices.push(p);
+              let callPayoff = 0;
+              let putPayoff = 0;
+              chosenCall.forEach(t => {
+                callPayoff += Math.max(p - t.strike, 0) * t.usedLiquidity;
+              });
+              chosenPut.forEach(t => {
+                putPayoff += Math.max(t.strike - p, 0) * t.usedLiquidity;
+              });
+              payoffCurve.push(callPayoff + putPayoff);
+            }
+          } else if (optionType === "call") {
+            let lowTick = Math.min(...chosenCall.map(t => t.strike));
+            let highTick = Math.max(...chosenCall.map(t => t.strike));
+            const steps = 50;
+            const stepSize = (highTick * 1.05 - lowTick * 0.95) / steps;
+            for (let p = lowTick * 0.95; p <= highTick * 1.05; p += stepSize) {
+              prices.push(p);
+              let cumPayoff = 0;
+              chosenCall.forEach(t => {
+                cumPayoff += Math.max(p - t.strike, 0) * t.usedLiquidity;
+              });
+              payoffCurve.push(cumPayoff);
+            }
+          } else if (optionType === "put") {
+            let lowTick = Math.min(...chosenPut.map(t => t.strike));
+            let highTick = Math.max(...chosenPut.map(t => t.strike));
+            const steps = 50;
+            const stepSize = (highTick * 1.05 - lowTick * 0.95) / steps;
+            for (let p = lowTick * 0.95; p <= highTick * 1.05; p += stepSize) {
+              prices.push(p);
+              let cumPayoff = 0;
+              chosenPut.forEach(t => {
+                cumPayoff += Math.max(t.strike - p, 0) * t.usedLiquidity;
+              });
+              payoffCurve.push(cumPayoff);
+            }
+          }
+          tradeData = {
+            ...tradeData,
+            underlyingPrices: prices,
+            payoffCurve: payoffCurve,
+            totalPremium: (optionType === "straddle"
+              ? chosenCall.concat(chosenPut)
+              : tradeData.chosenTicks
+            ).reduce((sum, tick) => sum + tick.premiumCost, 0),
+            optionType: optionType
+          };
+          updateTopPanelView();
+        } catch (error) {
+          console.error("Error fetching or processing data:", error);
+        }
+      }
+      
+      /******************************************************
+       * LOAD PERP TRADE PAGE
+       ******************************************************/
+      async function loadPerpTradePage() {
+        lastUpdateTime = Date.now();
+        // Use perp controls
+        const marketChoice = document.getElementById("marketSelectPerp").value;
+        const tradeAmount = parseFloat(document.getElementById("tradeAmountPerp").value);
+        const positionType = document.getElementById("toggleLong").classList.contains("active")
+          ? "long"
+          : "short";
+        const userAddress = "0xf8859BAae87Eac4C7EE0b81499eDDD99c778FBEB";
+        const optionMarket = marketConfig[marketChoice]
+          ? marketConfig[marketChoice].optionMarket
+          : marketConfig["S"].optionMarket;
+        spotPriceGlobal = await fetchSpotPrice(marketChoice);
+      
+        // Fetch liquidity data using same API
+        const liquidityData = await fetchLiquidityData(marketChoice);
+        let filteredTicks = [];
+        if (positionType === "long") {
+          filteredTicks = liquidityData.filter(t => t.strike >= spotPriceGlobal);
+          filteredTicks.sort((a, b) => a.strike - b.strike);
+        } else {
+          filteredTicks = liquidityData.filter(t => t.strike <= spotPriceGlobal);
+          filteredTicks.sort((a, b) => b.strike - a.strike);
+        }
+      
+        let cumulative = 0;
+        let chosenTicks = [];
+        for (let i = 0; i < filteredTicks.length && cumulative < tradeAmount; i++) {
+          let tick = { ...filteredTicks[i] };
+          let needed = tradeAmount - cumulative;
+          if (tick.availableLiquidity >= needed) {
+            tick.usedLiquidity = needed;
+            cumulative += needed;
+          } else {
+            tick.usedLiquidity = tick.availableLiquidity;
+            cumulative += tick.availableLiquidity;
+          }
+          chosenTicks.push(tick);
+        }
+      
+        const ttlSeconds = 86400; // default TTL for perp trades
+        const premiumPromises = chosenTicks.map(tick => {
+          // Use "call" for long and "put" for short
+          const qType = positionType === "long" ? "call" : "put";
+          const tickQuoteUrl = `https://api.stryke.xyz/clamm/purchase/quote?chainId=146&optionMarket=${optionMarket}&user=${userAddress}&strike=${tick.strike}&markPrice=${spotPriceGlobal}&type=${qType}&amount=${tick.usedLiquidity}&ttl=${ttlSeconds}`;
+          return fetch(tickQuoteUrl)
+            .then(res => res.json())
+            .then(data => {
+              const decimals = data.token.decimals;
+              return (parseFloat(data.premium) + parseFloat(data.fees || 0)) / Math.pow(10, decimals);
+            })
+            .catch(err => {
+              console.error("Error fetching premium for tick", tick.strike, err);
+              return 0;
+            });
+        });
+        const chosenPremiums = await Promise.all(premiumPromises);
+        chosenTicks.forEach((tick, idx) => {
+          tick.premiumCost = chosenPremiums[idx];
+        });
+      
+        // Compute cumulative payoff curve for Perp
+        let prices = [];
+        let payoffCurve = [];
+        let lowTick = Math.min(...chosenTicks.map(t => t.strike));
+        let highTick = Math.max(...chosenTicks.map(t => t.strike));
+        let chartMin, chartMax;
+        if (positionType === "long") {
+          chartMin = spotPriceGlobal * 0.95;
+          chartMax = highTick * 1.05;
+        } else {
+          chartMin = lowTick * 0.95;
+          chartMax = spotPriceGlobal * 1.05;
+        }
+        const steps = 50;
+        const stepSize = (chartMax - chartMin) / steps;
+        for (let p = chartMin; p <= chartMax; p += stepSize) {
+          prices.push(p);
+          let cumulativePayoff = 0;
+          if (positionType === "long") {
+            chosenTicks.forEach(t => {
+              cumulativePayoff += Math.max(p - t.strike, 0) * t.usedLiquidity;
+            });
+          } else {
+            chosenTicks.forEach(t => {
+              cumulativePayoff += Math.max(t.strike - p, 0) * t.usedLiquidity;
+            });
+          }
+          payoffCurve.push(cumulativePayoff);
+        }
+      
+        tradeData = {
+          chosenTicks: chosenTicks,
+          underlyingPrices: prices,
+          payoffCurve: payoffCurve,
+          totalPremium: chosenTicks.reduce((sum, tick) => sum + tick.premiumCost, 0),
+          positionType: positionType,
+          productType: "perp"
+        };
+        updateTopPanelView();
+      }
+      
+      /******************************************************
+       * FETCH FUNCTIONS
+       ******************************************************/
+      async function fetchSpotPrice(market) {
+        const config = marketConfig[market] || marketConfig["S"];
+        const url = config.spotApi;
+        try {
+          const resp = await fetch(url);
+          const data = await resp.json();
+          console.log("Fetched markPrice:", data.markPrice);
+          return parseFloat(data.markPrice);
+        } catch (err) {
+          console.error("Error fetching spot price:", err);
+          return 0;
+        }
+      }
+      
+      async function fetchLiquidityData(market) {
+        const config = marketConfig[market] || marketConfig["S"];
+        const liquidityUrl = `https://api.stryke.xyz/clamm/strikes-chain?chainId=146&optionMarket=${config.optionMarket}&callsReach=800&putsReach=800&filterDeprecated=true`;
+        const resp = await fetch(liquidityUrl);
+        const data = await resp.json();
+        let ticks = [];
+        data.forEach((item) => {
+          for (let key in item) {
+            const d = item[key][0];
+            const decimals = d.token.decimals;
+            const avail = parseFloat(d.meta.availableTokenLiquidity) / Math.pow(10, decimals);
+            const tot = parseFloat(d.meta.totalTokenLiquidity) / Math.pow(10, decimals);
+            ticks.push({ 
+              strike: parseFloat(key), 
+              availableLiquidity: avail, 
+              totalLiquidity: tot,
+              tokenSymbol: d.token.symbol 
+            });
+          }
+        });
+        ticks.sort((a, b) => a.strike - b.strike);
+        if (ticks.length > 0) {
+          globalMinTick = ticks[0].strike;
+          globalMaxTick = ticks[ticks.length - 1].strike;
+        }
+        return ticks;
+      }
+      
+      /******************************************************
+       * UPDATE TOP PANEL VIEW
+       ******************************************************/
+      function updateTopPanelView() {
+        const container = document.getElementById("topChartContainer");
+        container.innerHTML = "";
+        if (currentProductType === "options") {
+          if (currentTopView === "Liquidity") {
+            renderLiquidityChart();
+          } else if (currentTopView === "Table") {
+            renderOptionsTable();
+          } else if (currentTopView === "PnL") {
+            renderPnLChart();
+          }
+        } else if (currentProductType === "perp") {
+          if (currentTopView === "Liquidity") {
+            renderPerpDepthChart();
+          } else if (currentTopView === "Table") {
+            renderPerpTable();
+          } else if (currentTopView === "PnL") {
+            renderPerpPnLChart();
+          }
+        }
+      }
+      
+      /******************************************************
+       * RENDER OPTIONS TABLE
+       ******************************************************/
+      function renderOptionsTable() {
+        let html = "";
+        if (tradeData.optionType === "straddle") {
+          html += `<h3 class="text-white">Call Purchases</h3>
+            <table id="liquidityTable" class="min-w-full divide-y divide-gray-400 dark:divide-gray-700 text-sm">
+              <thead class="table-3d">
+                <tr>
+                  <th class="px-4 py-3 uppercase tracking-wider text-left">Range</th>
+                  <th class="px-4 py-3 uppercase tracking-wider text-left">Amount</th>
+                  <th class="px-4 py-3 uppercase tracking-wider text-left">Premium</th>
+                  <th class="px-4 py-3 uppercase tracking-wider text-left">Token</th>
+                  <th class="px-4 py-3 uppercase tracking-wider text-left">Breakdown</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-300 dark:divide-gray-700">`;
+          if (tradeData.chosenTicksCalls && tradeData.chosenTicksCalls.length > 0) {
+            const firstStrike = tradeData.chosenTicksCalls[0].strike;
+            const lastStrike = tradeData.chosenTicksCalls[tradeData.chosenTicksCalls.length - 1].strike;
+            const totalUsed = tradeData.chosenTicksCalls.reduce((sum, t) => sum + t.usedLiquidity, 0);
+            html += `<tr class="hover:bg-gray-100 dark:hover:bg-gray-800">
+              <td class="px-4 py-2">${firstStrike.toFixed(4)} - ${lastStrike.toFixed(4)}</td>
+              <td class="px-4 py-2">${totalUsed}</td>
+              <td class="px-4 py-2">${tradeData.totalPremium ? tradeData.totalPremium.toFixed(4) : 0}</td>
+              <td class="px-4 py-2">${tradeData.chosenTicksCalls[0].tokenSymbol}</td>
+              <td class="px-4 py-2">
+                <details>
+                  <summary class="cursor-pointer text-neonGreen">Show Breakdown</summary>
+                  <table class="min-w-full mt-2 text-xs">
+                    <tr>
+                      <th class="px-2 py-1">Strike</th>
+                      <th class="px-2 py-1">Amount</th>
+                      <th class="px-2 py-1">Premium</th>
+                      <th class="px-2 py-1">Token</th>
+                    </tr>`;
+            tradeData.chosenTicksCalls.forEach(tick => {
+              html += `<tr class="hover:bg-gray-100 dark:hover:bg-gray-800">
+                <td class="px-2 py-1">${tick.strike.toFixed(4)}</td>
+                <td class="px-2 py-1">${tick.usedLiquidity}</td>
+                <td class="px-2 py-1">${tick.premiumCost ? tick.premiumCost.toFixed(4) : 0}</td>
+                <td class="px-2 py-1">${tick.tokenSymbol}</td>
+              </tr>`;
+            });
+            html += `</table>
+                  </details>
+                </td>
+              </tr>`;
+          } else {
+            html += `<tr><td colspan="5" class="px-4 py-2">No call data available.</td></tr>`;
+          }
+          html += `</tbody></table>`;
+          
+          html += `<h3 class="text-white mt-4">Put Purchases</h3>
+            <table id="liquidityTable" class="min-w-full divide-y divide-gray-400 dark:divide-gray-700 text-sm">
+              <thead class="table-3d">
+                <tr>
+                  <th class="px-4 py-3 uppercase tracking-wider text-left">Range</th>
+                  <th class="px-4 py-3 uppercase tracking-wider text-left">Amount</th>
+                  <th class="px-4 py-3 uppercase tracking-wider text-left">Premium</th>
+                  <th class="px-4 py-3 uppercase tracking-wider text-left">Token</th>
+                  <th class="px-4 py-3 uppercase tracking-wider text-left">Breakdown</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-300 dark:divide-gray-700">`;
+          if (tradeData.chosenTicksPuts && tradeData.chosenTicksPuts.length > 0) {
+            const firstStrike = tradeData.chosenTicksPuts[0].strike;
+            const lastStrike = tradeData.chosenTicksPuts[tradeData.chosenTicksPuts.length - 1].strike;
+            const totalUsed = tradeData.chosenTicksPuts.reduce((sum, t) => sum + t.usedLiquidity, 0);
+            html += `<tr class="hover:bg-gray-100 dark:hover:bg-gray-800">
+              <td class="px-4 py-2">${firstStrike.toFixed(4)} - ${lastStrike.toFixed(4)}</td>
+              <td class="px-4 py-2">${totalUsed}</td>
+              <td class="px-4 py-2">${tradeData.totalPremium ? tradeData.totalPremium.toFixed(4) : 0}</td>
+              <td class="px-4 py-2">${tradeData.chosenTicksPuts[0].tokenSymbol}</td>
+              <td class="px-4 py-2">
+                <details>
+                  <summary class="cursor-pointer text-neonGreen">Show Breakdown</summary>
+                  <table class="min-w-full mt-2 text-xs">
+                    <tr>
+                      <th class="px-2 py-1">Strike</th>
+                      <th class="px-2 py-1">Amount</th>
+                      <th class="px-2 py-1">Premium</th>
+                      <th class="px-2 py-1">Token</th>
+                    </tr>`;
+            tradeData.chosenTicksPuts.forEach(tick => {
+              html += `<tr class="hover:bg-gray-100 dark:hover:bg-gray-800">
+                <td class="px-2 py-1">${tick.strike.toFixed(4)}</td>
+                <td class="px-2 py-1">${tick.usedLiquidity}</td>
+                <td class="px-2 py-1">${tick.premiumCost ? tick.premiumCost.toFixed(4) : 0}</td>
+                <td class="px-2 py-1">${tick.tokenSymbol}</td>
+              </tr>`;
+            });
+            html += `</table>
+                  </details>
+                </td>
+              </tr>`;
+          } else {
+            html += `<tr><td colspan="5" class="px-4 py-2">No put data available.</td></tr>`;
+          }
+          html += `</tbody></table>`;
+        } else {
+          let htmlSingle = `<table id="liquidityTable" class="min-w-full divide-y divide-gray-400 dark:divide-gray-700 text-sm">
+            <thead class="table-3d">
+              <tr>
+                <th class="px-4 py-3 uppercase tracking-wider text-left">Range</th>
+                <th class="px-4 py-3 uppercase tracking-wider text-left">Amount</th>
+                <th class="px-4 py-3 uppercase tracking-wider text-left">Premium</th>
+                <th class="px-4 py-3 uppercase tracking-wider text-left">Token</th>
+                <th class="px-4 py-3 uppercase tracking-wider text-left">Breakdown</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-300 dark:divide-gray-700">`;
+          if (tradeData.chosenTicks && tradeData.chosenTicks.length > 0) {
+            const firstStrike = tradeData.chosenTicks[0].strike;
+            const lastStrike = tradeData.chosenTicks[tradeData.chosenTicks.length - 1].strike;
+            const totalUsed = tradeData.chosenTicks.reduce((sum, t) => sum + t.usedLiquidity, 0);
+            htmlSingle += `<tr class="hover:bg-gray-100 dark:hover:bg-gray-800">
+              <td class="px-4 py-2">${firstStrike.toFixed(4)} - ${lastStrike.toFixed(4)}</td>
+              <td class="px-4 py-2">${totalUsed}</td>
+              <td class="px-4 py-2">${tradeData.totalPremium ? tradeData.totalPremium.toFixed(4) : 0}</td>
+              <td class="px-4 py-2">${tradeData.chosenTicks[0].tokenSymbol}</td>
+              <td class="px-4 py-2">
+                <details>
+                  <summary class="cursor-pointer text-neonGreen">Show Breakdown</summary>
+                  <table class="min-w-full mt-2 text-xs">
+                    <tr>
+                      <th class="px-2 py-1">Strike</th>
+                      <th class="px-2 py-1">Amount</th>
+                      <th class="px-2 py-1">Premium</th>
+                      <th class="px-2 py-1">Token</th>
+                    </tr>`;
+            tradeData.chosenTicks.forEach(tick => {
+              htmlSingle += `<tr class="hover:bg-gray-100 dark:hover:bg-gray-800">
+                <td class="px-2 py-1">${tick.strike.toFixed(4)}</td>
+                <td class="px-2 py-1">${tick.usedLiquidity}</td>
+                <td class="px-2 py-1">${tick.premiumCost ? tick.premiumCost.toFixed(4) : 0}</td>
+                <td class="px-2 py-1">${tick.tokenSymbol}</td>
+              </tr>`;
+            });
+            htmlSingle += `</table>
+                  </details>
+                </td>
+              </tr>`;
+          } else {
+            htmlSingle += `<tr><td colspan="5" class="px-4 py-2">No data available.</td></tr>`;
+          }
+          htmlSingle += `</tbody></table>`;
+          html = htmlSingle;
+        }
+        document.getElementById("bottomViewContainer").innerHTML = html;
+      }
+      
+      /******************************************************
+       * RENDER PERP CHARTS & TABLES
+       ******************************************************/
+      function renderPerpDepthChart() {
+        const container = document.getElementById("topChartContainer");
+        container.innerHTML = `<canvas id="perpDepthChart" width="600" height="250"></canvas>`;
+        const ctx = document.getElementById("perpDepthChart").getContext("2d");
+        let dataPoints = [];
+        let cumulativeLiquidity = 0;
+        if (tradeData.positionType === "long") {
+          tradeData.chosenTicks.forEach(t => {
+            cumulativeLiquidity += t.usedLiquidity;
+            dataPoints.push({ x: t.strike, y: cumulativeLiquidity });
+          });
+        } else {
+          let reversed = [...tradeData.chosenTicks].reverse();
+          cumulativeLiquidity = 0;
+          reversed.forEach(t => {
+            cumulativeLiquidity += t.usedLiquidity;
+            dataPoints.push({ x: t.strike, y: cumulativeLiquidity });
+          });
+        }
+        new Chart(ctx, {
+          type: "line",
+          data: {
+            datasets: [{
+              label: "Cumulative Liquidity",
+              data: dataPoints,
+              borderColor: "#0FFF95",
+              fill: false,
+              tension: 0.2
+            }]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              x: {
+                type: "linear",
+                position: "bottom",
+                ticks: { color: "#fff", callback: val => parseFloat(val).toFixed(2) },
+                grid: { color: "rgba(255,255,255,0.1)" }
+              },
+              y: {
+                beginAtZero: true,
+                ticks: { color: "#fff" },
+                grid: { color: "rgba(255,255,255,0.1)" }
+              }
+            },
+            plugins: {
+              legend: { labels: { color: "#fff" } }
+            }
+          }
+        });
+      }
+      
+      function renderPerpTable() {
+        let html = `<table id="liquidityTable" class="min-w-full divide-y divide-gray-400 dark:divide-gray-700 text-sm">
+          <thead class="table-3d">
+            <tr>
+              <th class="px-4 py-3 uppercase tracking-wider text-left">Strike</th>
+              <th class="px-4 py-3 uppercase tracking-wider text-left">Used Liquidity</th>
+              <th class="px-4 py-3 uppercase tracking-wider text-left">Premium</th>
+              <th class="px-4 py-3 uppercase tracking-wider text-left">Token</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-300 dark:divide-gray-700">`;
+        if (tradeData.chosenTicks && tradeData.chosenTicks.length > 0) {
+          tradeData.chosenTicks.forEach(tick => {
+            html += `<tr class="hover:bg-gray-100 dark:hover:bg-gray-800">
+              <td class="px-4 py-2">${tick.strike.toFixed(4)}</td>
+              <td class="px-4 py-2">${tick.usedLiquidity}</td>
+              <td class="px-4 py-2">${tick.premiumCost ? tick.premiumCost.toFixed(4) : 0}</td>
+              <td class="px-4 py-2">${tick.tokenSymbol}</td>
+            </tr>`;
+          });
+        } else {
+          html += `<tr><td colspan="4" class="px-4 py-2">No data available.</td></tr>`;
+        }
+        html += `</tbody></table>`;
+        document.getElementById("bottomViewContainer").innerHTML = html;
+      }
+      
+      function renderPerpPnLChart() {
+        const container = document.getElementById("topChartContainer");
+        container.innerHTML = `<canvas id="perpPnLChart" width="600" height="250"></canvas>`;
+        const ctx = document.getElementById("perpPnLChart").getContext("2d");
+        destroyPnLChart();
+        let annotations = {
+          markPriceLine: {
+            type: "line",
+            mode: "vertical",
+            scaleID: "x",
+            value: spotPriceGlobal,
+            borderColor: "#85C1E9",
+            borderWidth: 2,
+            label: { enabled: true, content: "Mark Price", color: "#fff" }
+          },
+          premiumLine: {
+            type: "line",
+            mode: "horizontal",
+            scaleID: "y",
+            value: tradeData.totalPremium || 0,
+            borderColor: "green",
+            borderWidth: 2,
+            label: { enabled: true, content: "Total Premium", color: "#fff" }
+          }
+        };
+        pnlChartInstance = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels: tradeData.underlyingPrices || [],
+            datasets: [{
+              label: "Cumulative Payoff",
+              data: tradeData.payoffCurve || [],
+              borderColor: "#ffcc00",
+              fill: false,
+              tension: 0.2
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    return context.dataset.label + ": " + context.parsed.y.toFixed(4);
+                  }
+                }
+              },
+              legend: { labels: { color: "#fff" } },
+              annotation: { annotations: annotations }
+            },
+            scales: {
+              x: {
+                type: "linear",
+                position: "bottom",
+                title: { display: true, text: "Price", color: "#ffcc00" },
+                min: tradeData.underlyingPrices ? tradeData.underlyingPrices[0] : 0,
+                max: tradeData.underlyingPrices ? tradeData.underlyingPrices[tradeData.underlyingPrices.length - 1] : 1,
+                ticks: { color: "#fff", callback: value => parseFloat(value).toFixed(2) },
+                grid: { color: "rgba(255,255,255,0.2)" }
+              },
+              y: {
+                beginAtZero: true,
+                title: { display: true, text: "Cumulative Payoff", color: "#ffcc00" },
+                ticks: { color: "#fff" },
+                grid: { color: "rgba(255,255,255,0.2)" }
+              }
+            }
+          }
+        });
+      }
+      
+      /******************************************************
+       * EVENT LISTENERS & INITIALIZATION
+       ******************************************************/
+      // Zoom preset buttons
+      document.querySelectorAll(".zoom-preset-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const preset = btn.getAttribute("data-preset");
+          setZoomPreset(preset);
+        });
+      });
+      
+      // 3-way view toggle (Liquidity, Table, PnL)
+      document.getElementById("toggleLiquidity").addEventListener("click", () => {
+        currentTopView = "Liquidity";
+        document.querySelectorAll(".threeway-toggle button").forEach(btn => btn.classList.remove("active"));
+        document.getElementById("toggleLiquidity").classList.add("active");
+        updateTopPanelView();
+      });
+      document.getElementById("toggleTable").addEventListener("click", () => {
+        currentTopView = "Table";
+        document.querySelectorAll(".threeway-toggle button").forEach(btn => btn.classList.remove("active"));
+        document.getElementById("toggleTable").classList.add("active");
+        updateTopPanelView();
+      });
+      document.getElementById("togglePnL").addEventListener("click", () => {
+        currentTopView = "PnL";
+        document.querySelectorAll(".threeway-toggle button").forEach(btn => btn.classList.remove("active"));
+        document.getElementById("togglePnL").classList.add("active");
+        updateTopPanelView();
+      });
+      
+      document.getElementById("logButton").addEventListener("click", () => {
+        useLogScale = !useLogScale;
+        document.getElementById("logButton").classList.toggle("active", useLogScale);
+        if (currentProductType === "options" && currentTopView === "Liquidity") {
+          renderLiquidityChart();
+        }
+      });
+      
+      // Product Type Toggle event listeners
+      document.getElementById("toggleOptions").addEventListener("click", () => {
+        currentProductType = "options";
+        document.getElementById("toggleOptions").classList.add("active");
+        document.getElementById("togglePerp").classList.remove("active");
+        // Show options controls; hide perp controls
+        document.getElementById("tradeControlsOptions").style.display = "flex";
+        document.getElementById("tradeControlsPerp").style.display = "none";
+        updateTopPanelView();
+      });
+      document.getElementById("togglePerp").addEventListener("click", () => {
+        currentProductType = "perp";
+        document.getElementById("togglePerp").classList.add("active");
+        document.getElementById("toggleOptions").classList.remove("active");
+        // Hide options controls; show perp controls
+        document.getElementById("tradeControlsOptions").style.display = "none";
+        document.getElementById("tradeControlsPerp").style.display = "flex";
+        updateTopPanelView();
+      });
+      
+      // Perp Position Toggle event listeners
+      document.getElementById("toggleLong").addEventListener("click", () => {
+        document.getElementById("toggleLong").classList.add("active");
+        document.getElementById("toggleShort").classList.remove("active");
+      });
+      document.getElementById("toggleShort").addEventListener("click", () => {
+        document.getElementById("toggleShort").classList.add("active");
+        document.getElementById("toggleLong").classList.remove("active");
+      });
+      
+      // Submit buttons
+      document.getElementById("submitBtn").addEventListener("click", () => {
+        if (currentProductType === "options") {
+          loadTradePage();
+        }
+      });
+      document.getElementById("submitBtnPerp").addEventListener("click", () => {
+        if (currentProductType === "perp") {
+          loadPerpTradePage();
+        }
+      });
+      
+      document.getElementById("refreshButton").addEventListener("click", () => {
+        if (currentProductType === "options") {
+          loadTradePage();
+        } else if (currentProductType === "perp") {
+          loadPerpTradePage();
+        }
+      });
+      
+      // Market change for options controls
+      document.getElementById("marketSelect").addEventListener("change", async () => {
+        await loadTradePage();
+        document.getElementById("minStrikeInput").value = (spotPriceGlobal * 0.95).toFixed(4);
+        document.getElementById("maxStrikeInput").value = (spotPriceGlobal * 1.05).toFixed(4);
+        rangeMin = spotPriceGlobal * 0.95;
+        rangeMax = spotPriceGlobal * 1.05;
+      });
+      
+      // Option type change
+      document.getElementById("optionType").addEventListener("change", () => {
+        const optType = document.getElementById("optionType").value;
+        if (spotPriceGlobal) {
+          if (optType === "call") {
+            document.getElementById("minStrikeInput").value = spotPriceGlobal.toFixed(4);
+            document.getElementById("maxStrikeInput").value = (spotPriceGlobal * 1.05).toFixed(4);
+            rangeMin = spotPriceGlobal;
+            rangeMax = spotPriceGlobal * 1.05;
+          } else if (optType === "put") {
+            document.getElementById("minStrikeInput").value = (spotPriceGlobal * 0.95).toFixed(4);
+            document.getElementById("maxStrikeInput").value = spotPriceGlobal.toFixed(4);
+            rangeMin = spotPriceGlobal * 0.95;
+            rangeMax = spotPriceGlobal;
+          } else if (optType === "straddle") {
+            document.getElementById("minStrikeInput").value = (spotPriceGlobal * 0.95).toFixed(4);
+            document.getElementById("maxStrikeInput").value = (spotPriceGlobal * 1.05).toFixed(4);
+            rangeMin = spotPriceGlobal * 0.95;
+            rangeMax = spotPriceGlobal * 1.05;
+          }
+          if (currentTopView === "Liquidity") renderLiquidityChart();
+        }
+      });
+      
+      document.getElementById("minStrikeInput").addEventListener("change", (e) => {
+        let val = parseFloat(e.target.value) || 0;
+        val = Math.round(val * 10000) / 10000;
+        rangeMin = val;
+        e.target.value = rangeMin.toFixed(4);
+        if (currentTopView === "Liquidity") renderLiquidityChart();
+      });
+      
+      document.getElementById("maxStrikeInput").addEventListener("change", (e) => {
+        let val = parseFloat(e.target.value) || 0;
+        val = Math.round(val * 10000) / 10000;
+        rangeMax = val;
+        e.target.value = rangeMax.toFixed(4);
+        if (currentTopView === "Liquidity") renderLiquidityChart();
+      });
+      
+      const modeToggle = document.getElementById("modeToggle");
+      modeToggle.addEventListener("click", () => {
+        document.documentElement.classList.toggle("dark");
+        modeToggle.classList.toggle("rotate-180");
+      });
+      
+      setInterval(() => {
+        const secsAgo = Math.floor((Date.now() - lastUpdateTime) / 1000);
+        document.getElementById("lastUpdated").innerText = "Last Updated: " + secsAgo + " secs ago";
+      }, 1000);
+      
+      /******************************************************
+       * INITIALIZATION
+       ******************************************************/
+      async function init() {
+        document.getElementById("tradeAmount").value = 1;
+        document.getElementById("tradeAmountPerp").value = 1;
+        zoomPreset = null;
+        await loadTradePage();
+        document.getElementById("minStrikeInput").value = (spotPriceGlobal * 0.95).toFixed(4);
+        document.getElementById("maxStrikeInput").value = (spotPriceGlobal * 1.05).toFixed(4);
+        rangeMin = spotPriceGlobal * 0.95;
+        rangeMax = spotPriceGlobal * 1.05;
+        // Default zoom preset to 50%
+        setZoomPreset("50");
+      }
+      init();
+    </script>
+  </body>
+</html>
