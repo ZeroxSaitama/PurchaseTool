@@ -683,6 +683,47 @@
         right: 0.5rem;
       }
       
+      /* Amount input with MAX button */
+      .amount-input-wrapper {
+        position: relative;
+        margin-bottom: 0.5rem;
+      }
+      
+      .amount-input {
+        padding-right: 4rem !important; /* Space for the MAX button */
+      }
+      
+      .max-button {
+        position: absolute;
+        right: 2px;
+        top: 2px;
+        bottom: 2px;
+        background-color: rgba(15, 255, 149, 0.2);
+        color: rgba(15, 255, 149, 1);
+        border: none;
+        border-radius: 0.375rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0 0.75rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .max-button:hover {
+        background-color: rgba(15, 255, 149, 0.3);
+      }
+      
+      /* Available liquidity text */
+      .available-liquidity {
+        font-size: 0.7rem;
+        color: rgba(255, 255, 255, 0.5);
+        text-align: right;
+        margin-bottom: 0.25rem;
+      }
+      
       /* Custom styles for the custom dropdown */
     </style>
   </head>
@@ -889,11 +930,14 @@
                   </div>
                 </div>
                 <div class="mt-4">
-                  <label for="tradeAmountCall" class="control-label block mb-1">Amount (%)</label>
+                  <div class="available-liquidity" id="callAvailableLiquidity">Available: $0</div>
+                  <div class="amount-input-wrapper">
+                    <input type="number" id="callAmountInput" placeholder="Amount" class="neumorphic-sunken rounded-md text-xs focus:outline-none focus:ring focus:ring-green-400 transition w-full compact-input amount-input" step="0.01" min="0" />
+                    <button id="callMaxButton" class="max-button">MAX</button>
+                  </div>
                   <input type="range" id="tradeAmountCall" min="0" max="100" value="0" step="1" class="slider w-full">
-                  <div class="liquidity-display text-center mt-1" id="callLiquidityDisplay">0% ($0)</div>
+                </div>
               </div>
-            </div>
               
             <!-- Put Controls -->
               <div id="putControls" style="display: none;" class="mb-4">
@@ -923,11 +967,14 @@
                   </div>
                 </div>
                 <div class="mt-4">
-                  <label for="tradeAmountPut" class="control-label block mb-1">Amount (%)</label>
+                  <div class="available-liquidity" id="putAvailableLiquidity">Available: $0</div>
+                  <div class="amount-input-wrapper">
+                    <input type="number" id="putAmountInput" placeholder="Amount" class="neumorphic-sunken rounded-md text-xs focus:outline-none focus:ring focus:ring-green-400 transition w-full compact-input amount-input" step="0.01" min="0" />
+                    <button id="putMaxButton" class="max-button">MAX</button>
+                  </div>
                   <input type="range" id="tradeAmountPut" min="0" max="100" value="0" step="1" class="slider w-full">
-                  <div class="liquidity-display text-center mt-1" id="putLiquidityDisplay">0% ($0)</div>
+                </div>
               </div>
-            </div>
               
               <!-- Submit Button (Options) -->
               <div class="mt-4">
@@ -1239,9 +1286,17 @@
             newVal = Math.min(newVal, currentPutMax - 0.0001);
             document.getElementById("putMinInput").value = newVal.toFixed(4);
           }
+          
+          // Update the available liquidity text and chart colors as the selectors are dragged
+          updateChartColors();
+          
           chart.update("none");
         },
         handleMouseUp(e, chart) {
+          if (this.draggingSelector) {
+            // Final update of chart colors after the drag is complete
+            updateChartColors();
+          }
           this.draggingSelector = null;
         },
         getRelativePosition(e, chart) {
@@ -1284,9 +1339,11 @@
           
           // Reset amount sliders to 0%
           document.getElementById("tradeAmountCall").value = 0;
-          document.getElementById("callLiquidityDisplay").innerText = "0% ($0)";
+          document.getElementById("callAmountInput").value = "0.00";
+          document.getElementById("callAvailableLiquidity").textContent = "Available: $0";
           document.getElementById("tradeAmountPut").value = 0;
-          document.getElementById("putLiquidityDisplay").innerText = "0% ($0)";
+          document.getElementById("putAmountInput").value = "0.00";
+          document.getElementById("putAvailableLiquidity").textContent = "Available: $0";
           
           // Reset selectors to specified ranges based on zoom level and option type
           const optType = document.getElementById("optionType").value;
@@ -1385,6 +1442,14 @@
           let target = total * (slider / 100);
           console.log("Target utilization:", target, "out of", total);
           
+          // Update the available liquidity display
+          document.getElementById("callAvailableLiquidity").textContent = `Available: $${formatNumber(total)}`;
+          
+          // Update the amount input field if it doesn't have focus
+          if (document.activeElement !== document.getElementById("callAmountInput")) {
+            document.getElementById("callAmountInput").value = formatNumberForInput(target);
+          }
+          
           let cumulative = 0;
           for (let i = 0; i < allData.length; i++) {
             const p = allData[i];
@@ -1404,8 +1469,6 @@
             }
           }
           console.log("Cumulative utilized:", cumulative);
-          document.getElementById("callLiquidityDisplay").innerText =
-            slider + "% ($" + formatNumber(target) + " / $" + formatNumber(total) + ")";
         } else if (optionType === "put") {
           const putMin = parseFloat(document.getElementById("putMinInput").value) || (spotPriceGlobal * 0.95);
           const putMax = parseFloat(document.getElementById("putMaxInput").value) || spotPriceGlobal;
@@ -1417,33 +1480,47 @@
           
           let total = putRange.reduce((sum, p) => sum + p.avail, 0);
           let target = total * (slider / 100);
+          
+          // Update the available liquidity display
+          document.getElementById("putAvailableLiquidity").textContent = `Available: $${formatNumber(total)}`;
+          
+          // Update the amount input field if it doesn't have focus
+          if (document.activeElement !== document.getElementById("putAmountInput")) {
+            document.getElementById("putAmountInput").value = formatNumberForInput(target);
+          }
+          
           let cumulative = 0;
           
           // Create a map to track which strikes have liquidity utilized
           let strikeMap = {};
           
           // Process liquidity starting from highest strike (closest to putMax/strike price)
-          for (let p of putRange) {
+          for (let tick of putRange) {
+            strikeMap[tick.strike] = {
+              utilized: 0,
+              remaining: tick.avail
+            };
+            
             if (cumulative < target) {
-              let use = Math.min(p.avail, target - cumulative);
-              strikeMap[p.strike] = use;
+              let use = Math.min(tick.avail, target - cumulative);
+              strikeMap[tick.strike].utilized = use;
+              strikeMap[tick.strike].remaining = tick.avail - use;
               cumulative += use;
-            } else {
-              strikeMap[p.strike] = 0;
             }
           }
           
-          // Apply the utilized and remaining values to the full dataset
+          // Now apply the utilized/remaining values to our main arrays
           for (let i = 0; i < allData.length; i++) {
-            const p = allData[i];
-            if (p.strike >= putMin && p.strike <= putMax) {
-              utilized[i] = strikeMap[p.strike] || 0;
-              remaining[i] = p.avail - utilized[i];
+            const tick = allData[i];
+            if (strikeMap[tick.strike]) {
+              utilized[i] = strikeMap[tick.strike].utilized;
+              remaining[i] = strikeMap[tick.strike].remaining;
             } else {
               utilized[i] = 0;
-              remaining[i] = p.avail;
+              remaining[i] = tick.avail;
             }
           }
+          
           document.getElementById("putLiquidityDisplay").innerText =
             slider + "% ($" + formatNumber(target) + " / $" + formatNumber(total) + ")";
         } else if (optionType === "strangle") {
@@ -1679,9 +1756,9 @@
           data: {
             datasets: [
               {
-                label: "Utilized Liquidity (USD)",
+                label: "Selected Liquidity (USD)",
                 data: initialUtilized,
-                backgroundColor: "rgba(128,0,128,0.8)",
+                backgroundColor: "#60a5fa",
                 stack: "liquidity",
                 barThickness: 2,
                 hidden: false
@@ -2291,9 +2368,11 @@
           }
           updateTopPanelView();
           document.getElementById("tradeAmountCall").value = 0;
-          document.getElementById("callLiquidityDisplay").innerText = "0% ($0)";
+          document.getElementById("callAmountInput").value = "0.00";
+          document.getElementById("callAvailableLiquidity").textContent = "Available: $0";
           document.getElementById("tradeAmountPut").value = 0;
-          document.getElementById("putLiquidityDisplay").innerText = "0% ($0)";
+          document.getElementById("putAmountInput").value = "0.00";
+          document.getElementById("putAvailableLiquidity").textContent = "Available: $0";
         }
       });
       
@@ -2370,9 +2449,11 @@
        ******************************************************/
       async function init() {
         document.getElementById("tradeAmountCall").value = 0;
-        document.getElementById("callLiquidityDisplay").innerText = "0% ($0)";
+        document.getElementById("callAmountInput").value = "0.00";
+        document.getElementById("callAvailableLiquidity").textContent = "Available: $0";
         document.getElementById("tradeAmountPut").value = 0;
-        document.getElementById("putLiquidityDisplay").innerText = "0% ($0)";
+        document.getElementById("putAmountInput").value = "0.00";
+        document.getElementById("putAvailableLiquidity").textContent = "Available: $0";
         document.getElementById("tradeAmountPerp").value = 1;
         zoomPreset = null;
         
@@ -3934,6 +4015,92 @@
         if (!marketDropdownButton.contains(event.target) && !marketDropdownList.contains(event.target)) {
           marketDropdownList.classList.add('hidden');
         }
+      });
+
+      // Helper function to format numbers for input fields
+      function formatNumberForInput(num) {
+        return parseFloat(num).toFixed(2);
+      }
+
+      // Event listeners for amount inputs and MAX buttons
+      document.getElementById("callAmountInput").addEventListener("input", function(e) {
+        const callMin = parseFloat(document.getElementById("callMinInput").value) || spotPriceGlobal;
+        const callMax = parseFloat(document.getElementById("callMaxInput").value) || (spotPriceGlobal * 1.05);
+        
+        // Calculate available liquidity
+        const callRange = window.processedLiquidityData.filter(p => p.strike >= callMin && p.strike <= callMax);
+        const totalAvailable = callRange.reduce((sum, p) => sum + p.avail, 0);
+        
+        // Get input value and clamp it to available liquidity
+        let value = parseFloat(e.target.value) || 0;
+        value = Math.min(value, totalAvailable);
+        
+        // Calculate percentage for slider
+        const percentage = totalAvailable > 0 ? Math.floor((value / totalAvailable) * 100) : 0;
+        
+        // Update slider value
+        document.getElementById("tradeAmountCall").value = percentage;
+        
+        // Update chart
+        updateChartColors();
+      });
+      
+      document.getElementById("putAmountInput").addEventListener("input", function(e) {
+        const putMin = parseFloat(document.getElementById("putMinInput").value) || (spotPriceGlobal * 0.95);
+        const putMax = parseFloat(document.getElementById("putMaxInput").value) || spotPriceGlobal;
+        
+        // Calculate available liquidity
+        const putRange = window.processedLiquidityData.filter(p => p.strike >= putMin && p.strike <= putMax);
+        const totalAvailable = putRange.reduce((sum, p) => sum + p.avail, 0);
+        
+        // Get input value and clamp it to available liquidity
+        let value = parseFloat(e.target.value) || 0;
+        value = Math.min(value, totalAvailable);
+        
+        // Calculate percentage for slider
+        const percentage = totalAvailable > 0 ? Math.floor((value / totalAvailable) * 100) : 0;
+        
+        // Update slider value
+        document.getElementById("tradeAmountPut").value = percentage;
+        
+        // Update chart
+        updateChartColors();
+      });
+      
+      document.getElementById("callMaxButton").addEventListener("click", function() {
+        const callMin = parseFloat(document.getElementById("callMinInput").value) || spotPriceGlobal;
+        const callMax = parseFloat(document.getElementById("callMaxInput").value) || (spotPriceGlobal * 1.05);
+        
+        // Calculate available liquidity
+        const callRange = window.processedLiquidityData.filter(p => p.strike >= callMin && p.strike <= callMax);
+        const totalAvailable = callRange.reduce((sum, p) => sum + p.avail, 0);
+        
+        // Set input to max available
+        document.getElementById("callAmountInput").value = formatNumberForInput(totalAvailable);
+        
+        // Set slider to 100%
+        document.getElementById("tradeAmountCall").value = 100;
+        
+        // Update chart
+        updateChartColors();
+      });
+      
+      document.getElementById("putMaxButton").addEventListener("click", function() {
+        const putMin = parseFloat(document.getElementById("putMinInput").value) || (spotPriceGlobal * 0.95);
+        const putMax = parseFloat(document.getElementById("putMaxInput").value) || spotPriceGlobal;
+        
+        // Calculate available liquidity
+        const putRange = window.processedLiquidityData.filter(p => p.strike >= putMin && p.strike <= putMax);
+        const totalAvailable = putRange.reduce((sum, p) => sum + p.avail, 0);
+        
+        // Set input to max available
+        document.getElementById("putAmountInput").value = formatNumberForInput(totalAvailable);
+        
+        // Set slider to 100%
+        document.getElementById("tradeAmountPut").value = 100;
+        
+        // Update chart
+        updateChartColors();
       });
     </script>
   </body>
