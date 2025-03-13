@@ -13,6 +13,206 @@
     <!-- Chart.js & chartjs-plugin-annotation -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.1.0"></script>
+    
+    <!-- Fresh implementation for chain-grouped market selector -->
+    <script>
+      // Chain information for the market selector
+      const CHAIN_DATA = {
+        42161: { 
+          name: "Arbitrum", 
+          color: "#2D374B", 
+          logo: "https://www.stryke.xyz/images/tokens/arb.svg"
+        },
+        146: { 
+          name: "Sonic", 
+          color: "#FF0420", 
+          logo: "https://www.stryke.xyz/images/tokens/ws.svg"
+        },
+        80094: { 
+          name: "Berachain", 
+          color: "#FAC807", 
+          logo: "https://www.stryke.xyz/_next/image?url=%2Fimages%2Ftokens%2Fbera.png&w=48&q=75"
+        },
+        5000: { 
+          name: "Mantle", 
+          color: "#0B1811", 
+          logo: "https://www.stryke.xyz/images/tokens/wmnt.svg"
+        },
+        81457: { 
+          name: "Blast", 
+          color: "#FF4500", 
+          logo: "https://www.stryke.xyz/_next/image?url=%2Fimages%2Ftokens%2Fblast.png&w=48&q=75"
+        },
+        8453: { 
+          name: "Base", 
+          color: "#0052FF", 
+          logo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cpath fill='%230052FF' fill-rule='nonzero' d='M14 28a14 14 0 1 0 0-28 14 14 0 0 0 0 28Z'/%3E%3Cpath fill='%23FFF' d='M13.967 23.86c5.445 0 9.86-4.415 9.86-9.86 0-5.445-4.415-9.86-9.86-9.86-5.166 0-9.403 3.974-9.825 9.03h14.63v1.642H4.142c.413 5.065 4.654 9.047 9.826 9.047Z'/%3E%3C/g%3E%3C/svg%3E"
+        }
+      };
+
+      // Function to fetch markets and group them by chain
+      async function fetchAndGroupMarkets() {
+        try {
+          console.log("Fetching markets from API...");
+          
+          // Fetch all markets
+          const response = await fetch('https://api.stryke.xyz/v1.1/clamm/option-markets?chains=42161%2C146%2C8453%2C81457%2C5000%2C80094');
+          const markets = await response.json();
+          
+          console.log("Markets fetched:", markets.length);
+          
+          // Group markets by chainId
+          const marketsByChain = {};
+          markets.forEach(market => {
+            if (!market.deprecated) {
+              const chainId = market.chainId.toString();
+              if (!marketsByChain[chainId]) {
+                marketsByChain[chainId] = [];
+              }
+              marketsByChain[chainId].push(market);
+            }
+          });
+          
+          // Store global markets data if needed
+          window.marketsData = markets;
+          
+          return {
+            allMarkets: markets,
+            marketsByChain: marketsByChain
+          };
+        } catch (error) {
+          console.error('Error fetching markets:', error);
+          return {
+            allMarkets: [],
+            marketsByChain: {}
+          };
+        }
+      }
+
+      // Function to populate the market dropdown with chain grouping
+      function populateChainGroupedDropdown(marketSelect, marketsByChain) {
+        if (!marketSelect || !marketsByChain) {
+          console.error("Invalid inputs to populateChainGroupedDropdown");
+          return null;
+        }
+        
+        // Clear existing options
+        marketSelect.innerHTML = '';
+        
+        // Sort chains by name
+        const sortedChainIds = Object.keys(marketsByChain).sort((a, b) => {
+          const chainA = CHAIN_DATA[a] || { name: "Unknown" };
+          const chainB = CHAIN_DATA[b] || { name: "Unknown" };
+          return chainA.name.localeCompare(chainB.name);
+        });
+        
+        let firstMarketAddress = null;
+        
+        // Add markets by chain groups
+        sortedChainIds.forEach(chainId => {
+          const chain = CHAIN_DATA[chainId] || { name: `Chain ${chainId}`, color: "#999" };
+          
+          // Create optgroup for the chain
+          const optgroup = document.createElement('optgroup');
+          optgroup.label = chain.name;
+          optgroup.style.backgroundColor = chain.color;
+          optgroup.style.color = "white";
+          optgroup.style.fontWeight = "bold";
+          
+          // Sort markets by liquidity (highest first)
+          const sortedMarkets = marketsByChain[chainId].sort((a, b) => 
+            (b.totalLiquidity || 0) - (a.totalLiquidity || 0)
+          );
+          
+          // Add markets for this chain
+          sortedMarkets.forEach(market => {
+            const option = document.createElement('option');
+            option.value = market.address;
+            option.textContent = market.pairName;
+            optgroup.appendChild(option);
+            
+            // Store first market address
+            if (!firstMarketAddress) {
+              firstMarketAddress = market.address;
+            }
+          });
+          
+          marketSelect.appendChild(optgroup);
+        });
+        
+        // Add custom styles for the dropdown
+        addDropdownStyles();
+        
+        return firstMarketAddress;
+      }
+      
+      // Function to add custom styles for the dropdown
+      function addDropdownStyles() {
+        const styleId = 'chain-dropdown-styles';
+        if (!document.getElementById(styleId)) {
+          const style = document.createElement('style');
+          style.id = styleId;
+          style.textContent = `
+            optgroup {
+              padding: 5px;
+              margin-top: 5px;
+              border-radius: 4px;
+            }
+            option {
+              padding-left: 10px;
+            }
+          `;
+          document.head.appendChild(style);
+        }
+      }
+
+      // Function to initialize the market selection
+      async function initializeMarketSelection() {
+        // Get the market select element
+        const marketSelect = document.getElementById('marketSelect');
+        if (!marketSelect) {
+          console.error("Market select element not found!");
+          return;
+        }
+        
+        // Fetch and group markets
+        const { allMarkets, marketsByChain } = await fetchAndGroupMarkets();
+        
+        // Populate the dropdown
+        const firstMarketAddress = populateChainGroupedDropdown(marketSelect, marketsByChain);
+        
+        // Select the first market
+        if (firstMarketAddress) {
+          console.log("Setting initial market:", firstMarketAddress);
+          marketSelect.value = firstMarketAddress;
+          
+          // Trigger market data loading - ensure this function exists in your code
+          if (typeof fetchMarketData === 'function') {
+            fetchMarketData(firstMarketAddress);
+          } else {
+            console.warn("fetchMarketData function not found. Please load market data manually.");
+          }
+        }
+        
+        // Add change event listener
+        marketSelect.addEventListener('change', function() {
+          const selectedMarketAddress = this.value;
+          console.log("Market changed:", selectedMarketAddress);
+          
+          // Load selected market data
+          if (typeof fetchMarketData === 'function') {
+            fetchMarketData(selectedMarketAddress);
+          }
+        });
+      }
+
+      // Initialize when the document is ready
+      document.addEventListener('DOMContentLoaded', function() {
+        console.log("DOM loaded, initializing market selection...");
+        initializeMarketSelection();
+      });
+    </script>
+    
     <script>
       tailwind.config = {
         darkMode: "class",
@@ -26,8 +226,7 @@
               lightOrange: "#FDBA74"
             },
             backgroundImage: {
-              "grain-light":
-                "url('https://www.transparenttextures.com/patterns/dark-matter.png')"
+              "grain-light": "url('https://www.transparenttextures.com/patterns/dark-matter.png')"
             },
             boxShadow: {
               card: "0 4px 6px rgba(0,0,0,0.1)",
@@ -38,6 +237,122 @@
       };
     </script>
     <style>
+      :root {
+        --highlight-color: #0FFF95;
+      }
+      /* Dark mode styles */
+      .dark {
+        --bg-color: #121212;
+        --surface-color: #1E1E1E;
+        --primary-color: #0FFF95;
+        --secondary-color: #f0f0f0;
+        color-scheme: dark;
+      }
+      /* Light mode styles */
+      :root:not(.dark) {
+        --bg-color: #f0f0f0;
+        --surface-color: #ffffff;
+        --primary-color: #106B4E;
+        --secondary-color: #121212;
+        color-scheme: light;
+      }
+
+      /* Enhanced market dropdown styles */
+      #marketDropdownButton {
+        transition: all 0.2s ease;
+        min-height: 38px;
+      }
+      
+      #marketDropdownButton:hover {
+        border-color: var(--highlight-color);
+      }
+      
+      #marketDropdownList {
+        transition: opacity 0.15s ease, transform 0.15s ease;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+        max-height: 320px;
+        transform-origin: top center;
+      }
+      
+      #marketDropdownList.hidden {
+        opacity: 0;
+        transform: translateY(-10px);
+        pointer-events: none;
+      }
+      
+      #marketDropdownList:not(.hidden) {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      
+      #marketDropdownList > div {
+        transition: background-color 0.15s ease;
+      }
+      
+      #marketDropdownList > div:hover {
+        background-color: rgba(15, 255, 149, 0.1);
+      }
+      
+      /* Market metrics badges */
+      .market-metric {
+        display: inline-flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      
+      .market-metric-value {
+        font-weight: 500;
+      }
+      
+      /* Sort buttons */
+      #sortByName, #sortByLiquidity, #sortByVolume {
+        transition: color 0.2s ease;
+        cursor: pointer;
+        padding: 2px 4px;
+        border-radius: 4px;
+      }
+      
+      .sort-active {
+        color: #0FFF95 !important;
+        font-weight: 500;
+        position: relative;
+      }
+      
+      .sort-active::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background-color: #0FFF95;
+        border-radius: 1px;
+      }
+      
+      /* Scrollbar styling */
+      #marketDropdownList::-webkit-scrollbar {
+        width: 6px;
+      }
+      
+      #marketDropdownList::-webkit-scrollbar-track {
+        background: #2A2A2A;
+      }
+      
+      #marketDropdownList::-webkit-scrollbar-thumb {
+        background: #4B5563;
+        border-radius: 3px;
+      }
+      
+      #marketDropdownList::-webkit-scrollbar-thumb:hover {
+        background: #606770;
+      }
+
+      body {
+        margin: 0;
+        font-family: 'Inter', sans-serif;
+        background-color: #121212;
+        color: white;
+      }
       /* Neumorphic Sunken Effect for Inputs */
       .neumorphic-sunken {
         background: #e0e0e0;
@@ -81,6 +396,12 @@
           inset -3px -3px 6px rgba(0,0,0,0.6);
         background: linear-gradient(145deg, #0FFF95, #2ecc71);
       }
+      
+      /* Option Type Toggle SVG Handling */
+      .option-type-toggle button.active svg path {
+        stroke: #000000 !important;
+      }
+      
       /* 3D Effect for Dropdown Selectors */
       .select-3d {
         background: linear-gradient(145deg, #e5e7eb, #d1d5db);
@@ -134,7 +455,7 @@
       .log-button.active {
         color: #0FFF95;
       }
-      /* 3-Way Toggle Styles */
+      /* 3-Way Toggle Styles (for product type only) */
       .threeway-toggle {
         display: inline-flex;
         border: 1px solid #4B5563;
@@ -195,6 +516,174 @@
       }
       /* Ensure dark-mode dropdown text is visible */
       input.neumorphic-sunken, .select-3d { color: #fff; }
+      /* Slider styling */
+      .slider {
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        width: 100px;
+        height: 4px;
+        background: #ddd;
+        outline: none;
+        border-radius: 2px;
+        transition: background-color 0.2s ease-in-out;
+      }
+      .slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #0FFF95;
+        cursor: pointer;
+        transition: transform 0.1s;
+      }
+      .slider::-webkit-slider-thumb:hover {
+        transform: scale(1.1);
+      }
+      .slider::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #0FFF95;
+        cursor: pointer;
+        transition: transform 0.1s;
+      }
+      .slider::-moz-range-thumb:hover {
+        transform: scale(1.1);
+      }
+      /* Liquidity display next to slider */
+      .liquidity-display {
+        font-size: 0.75rem;
+        color: #fff;
+        margin-top: 0.25rem;
+        text-align: center;
+      }
+      /* Modal Popup Styles */
+      .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+      }
+      .modal.active {
+        display: flex;
+      }
+      .modal-content {
+        background: #1A1F1F;
+        border-radius: 0.375rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+        padding: 1rem;
+        width: 90%;
+        max-width: 800px;
+      }
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .modal-header h2 {
+        color: #fff;
+      }
+      .modal-close {
+        font-size: 1.5rem;
+        color: #0FFF95;
+        cursor: pointer;
+      }
+      .modal-tabs {
+        display: flex;
+        margin-top: 1rem;
+        border-bottom: 1px solid #4B5563;
+      }
+      .modal-tab {
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        color: #D1D5DB;
+      }
+      .modal-tab.active {
+        border-bottom: 2px solid #0FFF95;
+        color: black;
+        background-color: #0FFF95;
+      }
+      .modal-body {
+        margin-top: 1rem;
+      }
+      /* Custom styles for min/max inputs */
+      .compact-input {
+        height: 28px;
+        padding: 0.25rem 0.5rem;
+      }
+      
+      /* Chart Container */
+      .chart-container {
+        width: 100%;
+        height: 400px;
+        margin: 0 auto;
+      }
+      /* Input placeholders */
+      .neumorphic-sunken::placeholder {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 0.75rem;
+        font-weight: 500;
+        opacity: 1; /* Firefox */
+      }
+      
+      /* Compact input style for min/max inputs */
+      .compact-input {
+        padding: 0.5rem 0.75rem;
+        height: 2.5rem;
+      }
+      
+      /* Input with arrow indicators */
+      .input-wrapper {
+        position: relative;
+        width: 100%;
+      }
+      
+      .input-with-left-arrow {
+        padding-left: 1.75rem !important;
+      }
+      
+      .input-with-right-arrow {
+        padding-right: 1.75rem !important;
+      }
+      
+      .arrow-indicator {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 0.875rem;
+        pointer-events: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.25rem;
+        height: 1.25rem;
+        transition: color 0.2s;
+      }
+      
+      /* Input focus affects the arrow color */
+      .input-wrapper input:focus + .arrow-indicator,
+      .input-wrapper input:focus ~ .arrow-indicator {
+        color: rgba(15, 255, 149, 0.8); /* Green color to match the focus ring */
+      }
+      
+      .arrow-left {
+        left: 0.5rem;
+      }
+      
+      .arrow-right {
+        right: 0.5rem;
+      }
+      
+      /* Custom styles for the custom dropdown */
     </style>
   </head>
   <body class="font-sans bg-grain-light dark:bg-[#1F1F1F] bg-cover bg-center bg-no-repeat transition-colors duration-300 min-h-screen">
@@ -221,39 +710,105 @@
       </div>
     </header>
     
-    <!-- Top Panel -->
+    <!-- Main Section (Options UI) -->
     <section id="liquidityChartSection" class="max-w-7xl mx-auto px-4 mt-6 mb-8 relative">
-      <div class="relative bg-gray-200 dark:bg-[#1A1A1A] rounded-lg shadow-3d p-4">
-        <!-- Product Type Toggle -->
-        <div class="flex items-center mb-2" id="productTypeToggleContainer">
-          <div class="threeway-toggle" id="productTypeToggle">
-            <button id="toggleSpot" class="disabled opacity-50 cursor-not-allowed">Spot</button>
-            <button id="toggleOptions" class="active">Options</button>
-            <button id="togglePerp">Perp</button>
-          </div>
-        </div>
-        <!-- 3-Way Toggle for View Modes -->
-        <div class="flex items-center mb-2">
-          <div class="threeway-toggle">
-            <button id="toggleLiquidity" class="active">Liquidity</button>
-            <button id="toggleTable">Table</button>
-            <button id="togglePnL">PnL</button>
-          </div>
-        </div>
-        <!-- Trade Controls -->
-        <div class="flex flex-wrap items-center justify-between mb-4">
-          <!-- Options Controls -->
-          <div class="flex flex-wrap items-center space-x-4" id="tradeControlsOptions">
-            <div>
-              <label for="marketSelect" class="control-label">Market</label>
-              <select id="marketSelect" class="select-3d rounded-md text-base focus:ring focus:ring-green-400 transition w-36">
-                <option value="S">Sonic</option>
-                <option value="ETH">ETH</option>
-              </select>
+      <div class="flex space-x-6">
+        <!-- Main Chart Panel -->
+        <div class="flex-grow relative bg-gray-200 dark:bg-[#1F1F1F] rounded-lg shadow-3d p-4">
+          <!-- Market Info Panel - Moved to the very top -->
+          <div class="bg-[#1A1A1A] rounded-md mb-3 p-3 flex items-center justify-between text-white border border-[#0FFF95] shadow-md">
+            <div class="flex-1 flex flex-col items-center border-r border-gray-700 px-2">
+              <span class="text-xs text-gray-400">Price</span>
+              <span id="marketInfoPrice" class="text-lg font-bold">--</span>
             </div>
+            <div class="flex-1 flex flex-col items-center border-r border-gray-700 px-2">
+              <span class="text-xs text-gray-400">Total Liquidity</span>
+              <span id="marketInfoLiquidity" class="text-lg font-bold">--</span>
+            </div>
+            <div class="flex-1 flex flex-col items-center border-r border-gray-700 px-2">
+              <span class="text-xs text-gray-400">Open Interest</span>
+              <span id="marketInfoOpenInterest" class="text-lg font-bold">--</span>
+            </div>
+            <div class="flex-1 flex flex-col items-center px-2">
+              <span class="text-xs text-gray-400">24h Volume</span>
+              <span id="marketInfoVolume" class="text-lg font-bold">--</span>
+            </div>
+          </div>
+          
+        <!-- Product Type Toggle (Spot/Options/Perp) -->
+          <div class="flex items-center justify-between mb-2">
+            <!-- Left side: Market selector styled like toggle (label removed) -->
             <div>
-              <label for="expirySelect" class="control-label">Expiry</label>
-              <select id="expirySelect" class="select-3d rounded-md text-base focus:ring focus:ring-green-400 transition w-24">
+              <div class="relative inline-block">
+                <div id="marketSelectContainer" class="relative w-64">
+                  <button id="marketDropdownButton" class="appearance-none cursor-pointer rounded-md focus:outline-none focus:ring focus:ring-green-400 transition px-4 py-1.5 font-medium text-sm bg-[#2A2A2A] text-white border border-[#4B5563] w-full text-left flex justify-between items-center">
+                    <span id="selectedMarketText">Select Market</span>
+                    <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                      <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                    </svg>
+                  </button>
+                  
+                  <!-- Hidden standard select for compatibility with existing code -->
+                  <select id="marketSelect" class="hidden">
+                    <option value="S">Sonic</option>
+                    <option value="ETH">ETH</option>
+                  </select>
+                  
+                  <!-- Custom dropdown with market details -->
+                  <div id="marketDropdownList" class="absolute z-10 w-80 mt-1 bg-[#2A2A2A] border border-[#4B5563] rounded-md shadow-lg max-h-96 overflow-y-auto hidden">
+                    <!-- Search box for markets -->
+                    <div class="sticky top-0 p-2 bg-[#2A2A2A] border-b border-[#4B5563] z-20">
+                      <input id="marketSearchInput" type="text" placeholder="Search markets..." 
+                             class="w-full px-3 py-2 bg-[#3A3A3A] text-white rounded-md border border-[#4B5563] focus:outline-none focus:ring focus:ring-green-400 text-sm">
+                      
+                      <!-- Sort options -->
+                      <div class="flex justify-between mt-2 text-xs text-gray-400">
+                        <span>Sort by:</span>
+                        <div class="flex space-x-2">
+                          <button id="sortByName" class="hover:text-green-400">Name</button>
+                          <button id="sortByLiquidity" class="hover:text-green-400 sort-active">Liquidity</button>
+                          <button id="sortByVolume" class="hover:text-green-400">Volume</button>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Dropdown items will be added here by JavaScript -->
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Right side: Product type toggle -->
+          <div id="productTypeToggleContainer">
+            <div class="threeway-toggle" id="productTypeToggle">
+              <button id="toggleSpot" class="disabled opacity-50 cursor-not-allowed">Spot</button>
+              <button id="toggleOptions" class="active">Options</button>
+                <button id="togglePerp">Perps</button>
+            </div>
+          </div>
+        </div>
+          
+          <!-- Zoom Presets (visible only in Options mode) -->
+          <div class="flex items-center mb-2" id="zoomContainer">
+            <button class="zoom-preset-btn" data-preset="full">Full</button>
+            <button class="zoom-preset-btn" data-preset="50">50%</button>
+            <button class="zoom-preset-btn" data-preset="25">25%</button>
+            <button class="zoom-preset-btn" data-preset="10">10%</button>
+            </div>
+          
+          <!-- Chart Container -->
+          <div id="topChartContainer"></div>
+        </div>
+        
+        <!-- Right Side Panel (Trading Controls) - Similar to Binance UI -->
+        <div class="w-80 relative bg-gray-200 dark:bg-[#1F1F1F] rounded-lg shadow-3d p-4">
+          <h2 class="text-white font-bold text-lg mb-4 border-b border-gray-700 pb-2">Trading Controls</h2>
+          
+          <!-- Options Controls -->
+          <div id="tradeControlsOptions">
+            <div class="mb-4">
+              <label for="expirySelect" class="control-label mb-1 block">Expiry</label>
+              <div class="relative inline-block w-full">
+                <select id="expirySelect" class="appearance-none cursor-pointer rounded-md focus:outline-none focus:ring focus:ring-green-400 transition px-4 py-1.5 font-medium text-sm bg-[#2A2A2A] text-white border border-[#4B5563] w-full">
                 <option value="3600">1h</option>
                 <option value="7200">2h</option>
                 <option value="21600">6h</option>
@@ -261,75 +816,158 @@
                 <option value="86400" selected>24h</option>
                 <option value="604800">1w</option>
               </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white">
+                  <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                  </svg>
             </div>
-            <div>
-              <label for="optionType" class="control-label">Option Type</label>
-              <select id="optionType" class="select-3d rounded-md text-base focus:ring focus:ring-green-400 transition w-28">
+              </div>
+            </div>
+            
+            <!-- Option Type Toggle (replaces dropdown) -->
+            <div class="mb-4">
+              <label class="control-label mb-1 block">Option Type</label>
+              <div class="option-type-toggle w-full flex rounded-md overflow-hidden border border-[#4B5563]">
+                <button id="optionTypeCall" class="flex-1 py-2 px-1 bg-[#2A2A2A] text-white hover:bg-[#3A3A3A] transition flex flex-col items-center" data-option-type="call">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 8L12 2L6 8" stroke="#0FFF95" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 2L12 22" stroke="#0FFF95" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <span class="text-xs">Long</span>
+                </button>
+                <button id="optionTypeStrangle" class="flex-1 py-2 px-1 bg-[#2A2A2A] text-white hover:bg-[#3A3A3A] transition flex flex-col items-center active" data-option-type="strangle">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M6 8L12 2L18 8" stroke="#0FFF95" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M6 16L12 22L18 16" stroke="#FF4B4B" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 2L12 22" stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <span class="text-xs">Both</span>
+                </button>
+                <button id="optionTypePut" class="flex-1 py-2 px-1 bg-[#2A2A2A] text-white hover:bg-[#3A3A3A] transition flex flex-col items-center" data-option-type="put">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M6 16L12 22L18 16" stroke="#FF4B4B" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 22L12 2" stroke="#FF4B4B" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <span class="text-xs">Short</span>
+                </button>
+              </div>
+              <!-- Keep the original select for JavaScript compatibility but hide it -->
+              <select id="optionType" class="hidden">
                 <option value="call">Call</option>
                 <option value="put">Put</option>
-                <option value="straddle" selected>Straddle</option>
+                <option value="strangle" selected>Strangle</option>
               </select>
             </div>
-            <div>
-              <label for="minStrikeInput" class="control-label">Min Strike</label>
-              <input type="number" id="minStrikeInput" placeholder="Min Strike" class="neumorphic-sunken rounded-md text-base focus:outline-none focus:ring focus:ring-green-400 transition w-24" step="0.0001" />
+            
+          <!-- Dynamic Option Controls -->
+            <div id="optionDynamicControls" style="display: none;" class="mt-4">
+            <!-- Call Controls -->
+              <div id="callControls" style="display: none;" class="mb-4">
+                <div class="text-white mb-2 font-medium">Calls</div>
+                <div class="flex space-x-2">
+                  <div class="flex-1">
+                    <div class="input-wrapper">
+                      <span class="arrow-indicator arrow-left">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <line x1="19" y1="12" x2="5" y2="12"></line>
+                          <polyline points="12 19 5 12 12 5"></polyline>
+                        </svg>
+                      </span>
+                      <input type="number" id="callMinInput" placeholder="Min Strike" class="neumorphic-sunken rounded-md text-xs focus:outline-none focus:ring focus:ring-green-400 transition w-full compact-input input-with-left-arrow" step="0.0001" />
+                    </div>
+                  </div>
+                  <div class="flex-1">
+                    <div class="input-wrapper">
+                      <input type="number" id="callMaxInput" placeholder="Max Strike" class="neumorphic-sunken rounded-md text-xs focus:outline-none focus:ring focus:ring-green-400 transition w-full compact-input input-with-right-arrow" step="0.0001" />
+                      <span class="arrow-indicator arrow-right">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <line x1="5" y1="12" x2="19" y2="12"></line>
+                          <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="mt-4">
+                  <label for="tradeAmountCall" class="control-label block mb-1">Amount (%)</label>
+                  <input type="range" id="tradeAmountCall" min="0" max="100" value="0" step="1" class="slider w-full">
+                  <div class="liquidity-display text-center mt-1" id="callLiquidityDisplay">0% ($0)</div>
+              </div>
             </div>
-            <div>
-              <label for="maxStrikeInput" class="control-label">Max Strike</label>
-              <input type="number" id="maxStrikeInput" placeholder="Max Strike" class="neumorphic-sunken rounded-md text-base focus:outline-none focus:ring focus:ring-green-400 transition w-24" step="0.0001" />
+              
+            <!-- Put Controls -->
+              <div id="putControls" style="display: none;" class="mb-4">
+                <div class="text-white mb-2 font-medium">Puts</div>
+                <div class="flex space-x-2">
+                  <div class="flex-1">
+                    <div class="input-wrapper">
+                      <span class="arrow-indicator arrow-left">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <line x1="19" y1="12" x2="5" y2="12"></line>
+                          <polyline points="12 19 5 12 12 5"></polyline>
+                        </svg>
+                      </span>
+                      <input type="number" id="putMaxInput" placeholder="Min Strike" class="neumorphic-sunken rounded-md text-xs focus:outline-none focus:ring focus:ring-green-400 transition w-full compact-input input-with-left-arrow" step="0.0001" />
+                    </div>
+                  </div>
+                  <div class="flex-1">
+                    <div class="input-wrapper">
+                      <input type="number" id="putMinInput" placeholder="Max Strike" class="neumorphic-sunken rounded-md text-xs focus:outline-none focus:ring focus:ring-green-400 transition w-full compact-input input-with-right-arrow" step="0.0001" />
+                      <span class="arrow-indicator arrow-right">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <line x1="5" y1="12" x2="19" y2="12"></line>
+                          <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="mt-4">
+                  <label for="tradeAmountPut" class="control-label block mb-1">Amount (%)</label>
+                  <input type="range" id="tradeAmountPut" min="0" max="100" value="0" step="1" class="slider w-full">
+                  <div class="liquidity-display text-center mt-1" id="putLiquidityDisplay">0% ($0)</div>
+              </div>
             </div>
-            <div>
-              <label for="tradeAmount" class="control-label">Amount</label>
-              <input type="number" id="tradeAmount" class="neumorphic-sunken rounded-md text-base focus:outline-none focus:ring focus:ring-green-400 transition w-24" step="any" value="1" />
-            </div>
-            <div class="flex flex-col space-y-1">
-              <button id="submitBtn" class="btn-3d py-2 px-4 text-base font-medium">Submit</button>
+              
+              <!-- Submit Button (Options) -->
+              <div class="mt-4">
+                <button id="submitBtn" class="btn-3d py-2 px-4 text-base font-medium w-full">Submit</button>
             </div>
           </div>
-          <!-- Perp Controls (initially hidden) -->
-          <div class="flex flex-wrap items-center space-x-4" id="tradeControlsPerp" style="display: none;">
-            <div>
-              <label for="marketSelectPerp" class="control-label">Market</label>
-              <select id="marketSelectPerp" class="select-3d rounded-md text-base focus:ring focus:ring-green-400 transition w-36">
+          </div>
+          
+          <!-- Perp Controls -->
+          <div id="tradeControlsPerp" style="display: none;">
+            <div class="mb-4">
+              <label for="marketSelectPerp" class="control-label mb-1 block">Market</label>
+              <div class="relative inline-block w-full">
+                <select id="marketSelectPerp" class="appearance-none cursor-pointer rounded-md focus:outline-none focus:ring focus:ring-green-400 transition px-4 py-1.5 font-medium text-sm bg-[#2A2A2A] text-white border border-[#4B5563] w-full">
                 <option value="S">Sonic</option>
                 <option value="ETH">ETH</option>
               </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white">
+                  <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                  </svg>
             </div>
-            <div>
+              </div>
+            </div>
+            <div class="mb-4">
               <label for="tradeAmountPerp" class="control-label">Amount</label>
-              <input type="number" id="tradeAmountPerp" class="neumorphic-sunken rounded-md text-base focus:outline-none focus:ring focus:ring-green-400 transition w-24" step="any" value="1" />
+              <input type="number" id="tradeAmountPerp" class="neumorphic-sunken rounded-md text-base focus:outline-none focus:ring focus:ring-green-400 transition w-full" step="any" value="1" />
             </div>
-            <div id="perpPositionToggle">
-              <label class="control-label">Position</label>
-              <div class="threeway-toggle">
+            <div id="perpPositionToggle" class="mb-4">
+              <label class="control-label mb-1 block">Position</label>
+              <div class="threeway-toggle w-full">
                 <button id="toggleLong" class="active">Long</button>
                 <button id="toggleShort">Short</button>
               </div>
             </div>
-            <div class="flex flex-col space-y-1">
-              <button id="submitBtnPerp" class="btn-3d py-2 px-4 text-base font-medium">Submit</button>
+            <div class="mt-4">
+              <button id="submitBtnPerp" class="btn-3d py-2 px-4 text-base font-medium w-full">Submit</button>
             </div>
           </div>
-          <!-- Zoom Presets and Log Button -->
-          <div class="flex items-center">
-            <div class="flex items-center space-x-2">
-              <button class="zoom-preset-btn" data-preset="full">Full</button>
-              <button class="zoom-preset-btn" data-preset="50">50%</button>
-              <button class="zoom-preset-btn" data-preset="25">25%</button>
-              <button class="zoom-preset-btn" data-preset="10">10%</button>
-            </div>
-            <button id="logButton" class="log-button ml-4">Log</button>
           </div>
-        </div>
-        <!-- Chart Container -->
-        <div id="topChartContainer"></div>
-      </div>
-    </section>
-    
-    <!-- Bottom View Card -->
-    <section id="bottomViewCard" class="max-w-7xl mx-auto px-4 mb-8">
-      <div class="bg-gray-200 dark:bg-[#1A1A1A] rounded-lg shadow-3d p-4">
-        <div id="bottomViewContainer"></div>
       </div>
     </section>
     
@@ -339,6 +977,24 @@
       <button id="refreshButton" class="text-neonGreen text-xl focus:outline-none" title="Refresh Data">↻</button>
     </div>
     
+    <!-- Modal Popup for Table & PnL -->
+    <div id="modalPopup" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="text-white">Trade Summary</h2>
+          <button id="modalClose" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-tabs">
+          <button id="tabTable" class="modal-tab active">Table</button>
+          <button id="tabPnL" class="modal-tab">PnL</button>
+        </div>
+        <div class="modal-body">
+          <div id="modalTable"></div>
+          <div id="modalPnL" class="hidden"></div>
+        </div>
+      </div>
+    </div>
+    
     <script>
       /******************************************************
        * GLOBAL VARIABLES & CONFIG
@@ -346,18 +1002,14 @@
       let totalLiquidityChartInstance = null;
       let pnlChartInstance = null;
       let tradeData = {};
-      let currentTopView = "Liquidity"; // "Liquidity", "Table", "PnL"
       let currentProductType = "options"; // "options" or "perp"
       let useLogScale = false;
       let spotPriceGlobal = 0;
       let lastUpdateTime = Date.now();
-      let rangeMin = 0;
-      let rangeMax = 0;
       let globalMinTick = 0;
       let globalMaxTick = 1;
       let zoomPreset = null;
       
-      // Global caches for liquidity data
       window.liquidityLog = [];
       window.processedLiquidityData = [];
       
@@ -375,12 +1027,11 @@
       const weeklyHook = "0xf6314300b42B7D88c153348921a95d3CA95E74Bd";
       
       /******************************************************
-       * DRAGGABLE RANGE SELECTOR PLUGIN (For Options)
+       * DRAGGABLE RANGE SELECTOR PLUGIN
        ******************************************************/
       const draggableRangePlugin = {
         id: "draggableRangePlugin",
-        draggingMin: false,
-        draggingMax: false,
+        draggingSelector: null,
         afterInit(chart) {
           const canvas = chart.canvas;
           canvas.addEventListener("mousedown", (e) => this.handleMouseDown(e, chart));
@@ -392,112 +1043,206 @@
           if (!chart.scales.x) return;
           const { ctx, chartArea, scales: { x } } = chart;
           ctx.save();
-          const overlayColor = document.documentElement.classList.contains("dark")
-            ? "rgba(200,200,200,0.3)"
-            : "rgba(0,0,0,0.3)";
-          const minX = x.getPixelForValue(rangeMin);
-          ctx.strokeStyle = "red";
+          
+          // Get selector values based on option type
+          const optType = document.getElementById("optionType").value;
+          let selectedRanges = [];
+          
+          if (optType === "call" || optType === "strangle") {
+            const callMin = parseFloat(document.getElementById("callMinInput").value) || spotPriceGlobal;
+            const callMax = parseFloat(document.getElementById("callMaxInput").value) || (spotPriceGlobal * 1.05);
+            selectedRanges.push({
+              min: callMin,
+              max: callMax,
+              minX: x.getPixelForValue(callMin),
+              maxX: x.getPixelForValue(callMax)
+            });
+          }
+          
+          if (optType === "put" || optType === "strangle") {
+            const putMin = parseFloat(document.getElementById("putMinInput").value) || (spotPriceGlobal * 0.95);
+            const putMax = parseFloat(document.getElementById("putMaxInput").value) || spotPriceGlobal;
+            selectedRanges.push({
+              min: putMin,
+              max: putMax,
+              minX: x.getPixelForValue(putMin),
+              maxX: x.getPixelForValue(putMax)
+            });
+          }
+          
+          // Draw a light grey overlay ONLY outside the selected ranges
+          // Use a lighter, more transparent grey for subtlety
+          ctx.fillStyle = "rgba(200, 200, 200, 0.25)";
+          
+          // First, draw left overlay (area to the left of the first range)
+          if (selectedRanges.length > 0) {
+            // Sort ranges by minX to handle them from left to right
+            selectedRanges.sort((a, b) => a.minX - b.minX);
+            
+            // Area to the left of the first range
+            if (selectedRanges[0].minX > chartArea.left) {
+              ctx.fillRect(
+                chartArea.left, 
+                chartArea.top, 
+                selectedRanges[0].minX - chartArea.left, 
+                chartArea.height
+              );
+            }
+            
+            // Areas between ranges (if there are multiple)
+            for (let i = 0; i < selectedRanges.length - 1; i++) {
+              const rightOfCurrentRange = selectedRanges[i].maxX;
+              const leftOfNextRange = selectedRanges[i + 1].minX;
+              
+              if (leftOfNextRange > rightOfCurrentRange) {
+                ctx.fillRect(
+                  rightOfCurrentRange,
+                  chartArea.top,
+                  leftOfNextRange - rightOfCurrentRange,
+                  chartArea.height
+                );
+              }
+            }
+            
+            // Area to the right of the last range
+            const lastRange = selectedRanges[selectedRanges.length - 1];
+            if (lastRange.maxX < chartArea.right) {
+              ctx.fillRect(
+                lastRange.maxX,
+                chartArea.top,
+                chartArea.right - lastRange.maxX,
+                chartArea.height
+              );
+            }
+          }
+          
+          // Draw the selector lines and circles
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.3)"; // Transparent white (was "red")
           ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.moveTo(minX, chartArea.top);
-          ctx.lineTo(minX, chartArea.bottom);
-          ctx.stroke();
-          // Draw a circular drag handle below the min selector
-          ctx.beginPath();
-          ctx.arc(minX, chartArea.bottom - 5, 4, 0, 2 * Math.PI);
-          ctx.fillStyle = "white";
-          ctx.fill();
           
-          const maxX = x.getPixelForValue(rangeMax);
-          ctx.beginPath();
-          ctx.moveTo(maxX, chartArea.top);
-          ctx.lineTo(maxX, chartArea.bottom);
-          ctx.stroke();
-          // Draw a circular drag handle below the max selector
-          ctx.beginPath();
-          ctx.arc(maxX, chartArea.bottom - 5, 4, 0, 2 * Math.PI);
-          ctx.fillStyle = "white";
-          ctx.fill();
-          
-          ctx.fillStyle = overlayColor;
-          ctx.fillRect(chartArea.left, chartArea.top, minX - chartArea.left, chartArea.bottom - chartArea.top);
-          ctx.fillRect(maxX, chartArea.top, chartArea.right - maxX, chartArea.bottom - chartArea.top);
-          
-          // Draw available liquidity text at the top
-          if (window.processedLiquidityData && window.processedLiquidityData.length) {
-            const liquidityInRange = window.processedLiquidityData
-              .filter(p => p.strike >= rangeMin && p.strike <= rangeMax)
-              .reduce((sum, p) => sum + p.avail, 0);
-            document.getElementById("tradeAmount").max = liquidityInRange;
-            const centerX = (minX + maxX) / 2;
-            const centerY = chartArea.top + 14;
+          if (optType === "call" || optType === "strangle") {
+            const callMin = parseFloat(document.getElementById("callMinInput").value) || spotPriceGlobal;
+            const callMax = parseFloat(document.getElementById("callMaxInput").value) || (spotPriceGlobal * 1.05);
+            const callMinX = x.getPixelForValue(callMin);
+            const callMaxX = x.getPixelForValue(callMax);
+            ctx.beginPath();
+            ctx.moveTo(callMinX, chartArea.top);
+            ctx.lineTo(callMinX, chartArea.bottom);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(callMinX, chartArea.bottom - 5, 4, 0, 2 * Math.PI);
+            ctx.fillStyle = "rgba(255, 255, 255, 0.3)"; // Transparent white (was "white")
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(callMaxX, chartArea.top);
+            ctx.lineTo(callMaxX, chartArea.bottom);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(callMaxX, chartArea.bottom - 5, 4, 0, 2 * Math.PI);
+            ctx.fillStyle = "rgba(255, 255, 255, 0.3)"; // Transparent white (was "white")
+            ctx.fill();
+            const midCallX = (callMinX + callMaxX) / 2;
             ctx.font = "bold 14px sans-serif";
             ctx.fillStyle = "white";
             ctx.textAlign = "center";
-            ctx.fillText("Avail: " + formatNumber(liquidityInRange) + " USD", centerX, centerY);
+            let callLiquidity = window.processedLiquidityData.filter(p => p.strike >= callMin && p.strike <= callMax)
+                                 .reduce((sum, p) => sum + p.avail, 0);
+            // Get the selected percentage from the slider
+            const callSliderValue = parseInt(document.getElementById("tradeAmountCall").value) || 0;
+            const selectedCallLiquidity = callLiquidity * (callSliderValue / 100);
+            ctx.fillText("$" + formatNumber(selectedCallLiquidity) + " / $" + formatNumber(callLiquidity), midCallX, chartArea.top + 14);
+          }
+          if (optType === "put" || optType === "strangle") {
+            const putMax = parseFloat(document.getElementById("putMaxInput").value) || spotPriceGlobal;
+            const putMin = parseFloat(document.getElementById("putMinInput").value) || (spotPriceGlobal * 0.95);
+            const putMaxX = x.getPixelForValue(putMax);
+            const putMinX = x.getPixelForValue(putMin);
+            ctx.beginPath();
+            ctx.moveTo(putMaxX, chartArea.top);
+            ctx.lineTo(putMaxX, chartArea.bottom);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(putMaxX, chartArea.bottom - 5, 4, 0, 2 * Math.PI);
+            ctx.fillStyle = "rgba(255, 255, 255, 0.3)"; // Transparent white (was "white")
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(putMinX, chartArea.top);
+            ctx.lineTo(putMinX, chartArea.bottom);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(putMinX, chartArea.bottom - 5, 4, 0, 2 * Math.PI);
+            ctx.fillStyle = "rgba(255, 255, 255, 0.3)"; // Transparent white (was "white")
+            ctx.fill();
+            const midPutX = (putMinX + putMaxX) / 2;
+            ctx.font = "bold 14px sans-serif";
+            ctx.fillStyle = "white";
+            ctx.textAlign = "center";
+            let putLiquidity = window.processedLiquidityData.filter(p => p.strike >= putMin && p.strike <= putMax)
+                                 .reduce((sum, p) => sum + p.avail, 0);
+            // Get the selected percentage from the slider
+            const putSliderValue = parseInt(document.getElementById("tradeAmountPut").value) || 0;
+            const selectedPutLiquidity = putLiquidity * (putSliderValue / 100);
+            ctx.fillText("$" + formatNumber(selectedPutLiquidity) + " / $" + formatNumber(putLiquidity), midPutX, chartArea.top + 14);
           }
           ctx.restore();
         },
         handleMouseDown(e, chart) {
           const pos = this.getRelativePosition(e, chart);
           const xScale = chart.scales.x;
-          const minX = xScale.getPixelForValue(rangeMin);
-          const maxX = xScale.getPixelForValue(rangeMax);
           const threshold = 6;
-          if (Math.abs(pos.x - minX) < threshold) {
-            this.draggingMin = true;
-          } else if (Math.abs(pos.x - maxX) < threshold) {
-            this.draggingMax = true;
+          const optType = document.getElementById("optionType").value;
+          if (optType === "call" || optType === "strangle") {
+            const callMin = parseFloat(document.getElementById("callMinInput").value) || spotPriceGlobal;
+            const callMax = parseFloat(document.getElementById("callMaxInput").value) || (spotPriceGlobal * 1.05);
+            const callMinX = xScale.getPixelForValue(callMin);
+            const callMaxX = xScale.getPixelForValue(callMax);
+            if (Math.abs(pos.x - callMinX) < threshold) { this.draggingSelector = "callMin"; return; }
+            if (Math.abs(pos.x - callMaxX) < threshold) { this.draggingSelector = "callMax"; return; }
+          }
+          if (optType === "put" || optType === "strangle") {
+            const putMax = parseFloat(document.getElementById("putMaxInput").value) || spotPriceGlobal;
+            const putMin = parseFloat(document.getElementById("putMinInput").value) || (spotPriceGlobal * 0.95);
+            const putMaxX = xScale.getPixelForValue(putMax);
+            const putMinX = xScale.getPixelForValue(putMin);
+            if (Math.abs(pos.x - putMaxX) < threshold) { this.draggingSelector = "putMax"; return; }
+            if (Math.abs(pos.x - putMinX) < threshold) { this.draggingSelector = "putMin"; return; }
           }
         },
         handleMouseMove(e, chart) {
-          if (!this.draggingMin && !this.draggingMax) return;
+          if (!this.draggingSelector) return;
           const pos = this.getRelativePosition(e, chart);
           const xScale = chart.scales.x;
-          let val = xScale.getValueForPixel(pos.x);
-          val = Math.round(val * 10000) / 10000;
-          val = Math.max(val, xScale.min);
-          val = Math.min(val, xScale.max);
+          let newVal = xScale.getValueForPixel(pos.x);
+          newVal = Math.round(newVal * 10000) / 10000;
           const optType = document.getElementById("optionType").value;
-          if (optType === "call") {
-            if (this.draggingMin) {
-              val = Math.max(val, spotPriceGlobal);
-              val = Math.min(val, rangeMax - 0.0001);
-            }
-            if (this.draggingMax) {
-              val = Math.min(val, globalMaxTick);
-              val = Math.max(val, rangeMin + 0.0001);
-            }
-          } else if (optType === "put") {
-            if (this.draggingMin) {
-              val = Math.max(val, globalMinTick);
-              val = Math.min(val, rangeMax - 0.0001, spotPriceGlobal - 0.0001);
-            }
-            if (this.draggingMax) {
-              val = Math.min(val, spotPriceGlobal);
-              val = Math.max(val, rangeMin + 0.0001);
-            }
-          } else if (optType === "straddle") {
-            if (this.draggingMin) {
-              val = Math.min(val, spotPriceGlobal, rangeMax - 0.0001);
-            }
-            if (this.draggingMax) {
-              val = Math.max(val, spotPriceGlobal, rangeMin + 0.0001);
-            }
+          if (this.draggingSelector === "callMin") {
+            // Add constraint: call min cannot go below mark price
+            newVal = Math.max(newVal, spotPriceGlobal);
+            const currentCallMax = parseFloat(document.getElementById("callMaxInput").value) || (spotPriceGlobal * 1.05);
+            newVal = Math.min(newVal, currentCallMax - 0.0001);
+            document.getElementById("callMinInput").value = newVal.toFixed(4);
           }
-          if (this.draggingMin) {
-            rangeMin = val;
-            document.getElementById("minStrikeInput").value = rangeMin.toFixed(4);
+          if (this.draggingSelector === "callMax") {
+            const currentCallMin = parseFloat(document.getElementById("callMinInput").value) || spotPriceGlobal;
+            newVal = Math.max(newVal, currentCallMin + 0.0001);
+            document.getElementById("callMaxInput").value = newVal.toFixed(4);
           }
-          if (this.draggingMax) {
-            rangeMax = val;
-            document.getElementById("maxStrikeInput").value = rangeMax.toFixed(4);
+          if (this.draggingSelector === "putMax") {
+            // Add constraint: put max cannot go above mark price
+            newVal = Math.min(newVal, spotPriceGlobal);
+            const currentPutMin = parseFloat(document.getElementById("putMinInput").value) || (spotPriceGlobal * 0.95);
+            newVal = Math.max(newVal, currentPutMin + 0.0001);
+            document.getElementById("putMaxInput").value = newVal.toFixed(4);
+          }
+          if (this.draggingSelector === "putMin") {
+            const currentPutMax = parseFloat(document.getElementById("putMaxInput").value) || spotPriceGlobal;
+            newVal = Math.min(newVal, currentPutMax - 0.0001);
+            document.getElementById("putMinInput").value = newVal.toFixed(4);
           }
           chart.update("none");
         },
         handleMouseUp(e, chart) {
-          this.draggingMin = false;
-          this.draggingMax = false;
+          this.draggingSelector = null;
         },
         getRelativePosition(e, chart) {
           const rect = chart.canvas.getBoundingClientRect();
@@ -523,36 +1268,363 @@
       }
       
       /******************************************************
-       * ZOOM PRESET FUNCTIONS
+       * ZOOM PRESET FUNCTIONS (Options only)
        ******************************************************/
       function setZoomPreset(preset) {
         if (currentProductType === "options") {
-          document.getElementById("minStrikeInput").value = (spotPriceGlobal * 0.95).toFixed(4);
-          document.getElementById("maxStrikeInput").value = (spotPriceGlobal * 1.05).toFixed(4);
-          rangeMin = spotPriceGlobal * 0.95;
-          rangeMax = spotPriceGlobal * 1.05;
-        }
-        if (preset === "full") {
-          zoomPreset = null;
-        } else if (preset === "50") {
-          zoomPreset = { min: spotPriceGlobal * 0.5, max: spotPriceGlobal * 1.5 };
-        } else if (preset === "25") {
-          zoomPreset = { min: spotPriceGlobal * 0.75, max: spotPriceGlobal * 1.25 };
-        } else if (preset === "10") {
-          zoomPreset = { min: spotPriceGlobal * 0.90, max: spotPriceGlobal * 1.10 };
+          if (preset === "full") {
+            zoomPreset = null;
+      
+            zoomPreset = { min: spotPriceGlobal * 0.5, max: spotPriceGlobal * 1.5 };
+          } else if (preset === "25") {
+            zoomPreset = { min: spotPriceGlobal * 0.75, max: spotPriceGlobal * 1.25 };
+          } else if (preset === "10") {
+            zoomPreset = { min: spotPriceGlobal * 0.90, max: spotPriceGlobal * 1.10 };
+          }
+          
+          // Reset amount sliders to 0%
+          document.getElementById("tradeAmountCall").value = 0;
+          document.getElementById("callLiquidityDisplay").innerText = "0% ($0)";
+          document.getElementById("tradeAmountPut").value = 0;
+          document.getElementById("putLiquidityDisplay").innerText = "0% ($0)";
+          
+          // Reset selectors to specified ranges based on zoom level and option type
+          const optType = document.getElementById("optionType").value;
+          
+          if (preset === "full") {
+            // Full: Call selectors min at mark price, max at last tick
+            // Put selectors max at mark price, min at first tick
+            if (optType === "call" || optType === "strangle") {
+              // Ensure call min is at least at mark price
+              document.getElementById("callMinInput").value = spotPriceGlobal.toFixed(4);
+              document.getElementById("callMaxInput").value = globalMaxTick.toFixed(4);
+            }
+            if (optType === "put" || optType === "strangle") {
+              // Ensure put max is at most at mark price
+              document.getElementById("putMaxInput").value = spotPriceGlobal.toFixed(4);
+              document.getElementById("putMinInput").value = globalMinTick.toFixed(4);
+            }
+          } else if (preset === "50") {
+            // 50%: 0% to 20% from mark price
+            if (optType === "call" || optType === "strangle") {
+              // Ensure call min is at least at mark price
+              document.getElementById("callMinInput").value = spotPriceGlobal.toFixed(4);
+              document.getElementById("callMaxInput").value = (spotPriceGlobal * 1.20).toFixed(4);
+            }
+            if (optType === "put" || optType === "strangle") {
+              // Ensure put max is at most at mark price
+              document.getElementById("putMaxInput").value = spotPriceGlobal.toFixed(4);
+              document.getElementById("putMinInput").value = (spotPriceGlobal * 0.80).toFixed(4);
+            }
+          } else if (preset === "25") {
+            // 25%: 0% to 10% from mark price
+            if (optType === "call" || optType === "strangle") {
+              // Ensure call min is at least at mark price
+              document.getElementById("callMinInput").value = spotPriceGlobal.toFixed(4);
+              document.getElementById("callMaxInput").value = (spotPriceGlobal * 1.10).toFixed(4);
+            }
+            if (optType === "put" || optType === "strangle") {
+              // Ensure put max is at most at mark price
+              document.getElementById("putMaxInput").value = spotPriceGlobal.toFixed(4);
+              document.getElementById("putMinInput").value = (spotPriceGlobal * 0.90).toFixed(4);
+            }
+          } else if (preset === "10") {
+            // 10%: 0% to 5% from mark price
+            if (optType === "call" || optType === "strangle") {
+              // Ensure call min is at least at mark price
+              document.getElementById("callMinInput").value = spotPriceGlobal.toFixed(4);
+              document.getElementById("callMaxInput").value = (spotPriceGlobal * 1.05).toFixed(4);
+            }
+            if (optType === "put" || optType === "strangle") {
+              // Ensure put max is at most at mark price
+              document.getElementById("putMaxInput").value = spotPriceGlobal.toFixed(4);
+              document.getElementById("putMinInput").value = (spotPriceGlobal * 0.95).toFixed(4);
+            }
+          }
+          
+          // Update the chart colors to reflect the new selector ranges
+          updateChartColors();
         }
         updateTopPanelView();
         document.querySelectorAll(".zoom-preset-btn").forEach(btn => btn.classList.remove("active"));
-        document.querySelector(`.zoom-preset-btn[data-preset="${preset}"]`)?.classList.add("active");
+        const btn = document.querySelector(`.zoom-preset-btn[data-preset="${preset}"]`);
+        if (btn) btn.classList.add("active");
       }
+      
+      // Add event listeners for zoom preset buttons
+      document.querySelectorAll('.zoom-preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const preset = btn.getAttribute('data-preset');
+          setZoomPreset(preset);
+        });
+      });
+      
+      /******************************************************
+       * UPDATE CHART COLORS (Smooth, real‑time update)
+       ******************************************************/
+      function updateChartColors() {
+        console.log("updateChartColors called");
+        const optionType = document.getElementById("optionType").value;
+        const allData = window.processedLiquidityData;
+        console.log("Data length:", allData.length);
+        
+        let utilized = new Array(allData.length).fill(0);
+        let remaining = new Array(allData.length).fill(0);
+        
+        // Process based on option type
+        if (optionType === "call") {
+          const callMin = parseFloat(document.getElementById("callMinInput").value) || spotPriceGlobal;
+          const callMax = parseFloat(document.getElementById("callMaxInput").value) || (spotPriceGlobal * 1.05);
+          const slider = parseInt(document.getElementById("tradeAmountCall").value);
+          console.log("Call slider value:", slider);
+          
+          let callRange = allData.filter(p => p.strike >= callMin && p.strike <= callMax);
+          console.log("Strikes in range:", callRange.length);
+          
+          let total = callRange.reduce((sum, p) => sum + p.avail, 0);
+          let target = total * (slider / 100);
+          console.log("Target utilization:", target, "out of", total);
+          
+          let cumulative = 0;
+          for (let i = 0; i < allData.length; i++) {
+            const p = allData[i];
+            if (p.strike >= callMin && p.strike <= callMax) {
+              if (cumulative < target) {
+                let use = Math.min(p.avail, target - cumulative);
+                utilized[i] = use;
+                remaining[i] = p.avail - use;
+                cumulative += use;
+              } else {
+                utilized[i] = 0;
+                remaining[i] = p.avail;
+              }
+            } else {
+              utilized[i] = 0;
+              remaining[i] = p.avail;
+            }
+          }
+          console.log("Cumulative utilized:", cumulative);
+          document.getElementById("callLiquidityDisplay").innerText =
+            slider + "% ($" + formatNumber(target) + " / $" + formatNumber(total) + ")";
+        } else if (optionType === "put") {
+          const putMin = parseFloat(document.getElementById("putMinInput").value) || (spotPriceGlobal * 0.95);
+          const putMax = parseFloat(document.getElementById("putMaxInput").value) || spotPriceGlobal;
+          const slider = parseInt(document.getElementById("tradeAmountPut").value);
+          // Get all the strikes within our range
+          let putRange = allData.filter(p => p.strike >= putMin && p.strike <= putMax);
+          // Sort from highest to lowest strike (right to left on chart)
+          putRange.sort((a, b) => b.strike - a.strike);
+          
+          let total = putRange.reduce((sum, p) => sum + p.avail, 0);
+          let target = total * (slider / 100);
+          let cumulative = 0;
+          
+          // Create a map to track which strikes have liquidity utilized
+          let strikeMap = {};
+          
+          // Process liquidity starting from highest strike (closest to putMax/strike price)
+          for (let p of putRange) {
+            if (cumulative < target) {
+              let use = Math.min(p.avail, target - cumulative);
+              strikeMap[p.strike] = use;
+              cumulative += use;
+            } else {
+              strikeMap[p.strike] = 0;
+            }
+          }
+          
+          // Apply the utilized and remaining values to the full dataset
+          for (let i = 0; i < allData.length; i++) {
+            const p = allData[i];
+            if (p.strike >= putMin && p.strike <= putMax) {
+              utilized[i] = strikeMap[p.strike] || 0;
+              remaining[i] = p.avail - utilized[i];
+            } else {
+              utilized[i] = 0;
+              remaining[i] = p.avail;
+            }
+          }
+          document.getElementById("putLiquidityDisplay").innerText =
+            slider + "% ($" + formatNumber(target) + " / $" + formatNumber(total) + ")";
+        } else if (optionType === "strangle") {
+          // Call side (fills left to right)
+          const callMin = parseFloat(document.getElementById("callMinInput").value) || spotPriceGlobal;
+          const callMax = parseFloat(document.getElementById("callMaxInput").value) || (spotPriceGlobal * 1.05);
+          const callSlider = parseInt(document.getElementById("tradeAmountCall").value);
+          let callRange = allData.filter(p => p.strike >= callMin && p.strike <= callMax);
+          let callTotal = callRange.reduce((sum, p) => sum + p.avail, 0);
+          let callTarget = callTotal * (callSlider / 100);
+          
+          // Put side (fills right to left, from strike price downward)
+          const putMin = parseFloat(document.getElementById("putMinInput").value) || (spotPriceGlobal * 0.95);
+          const putMax = parseFloat(document.getElementById("putMaxInput").value) || spotPriceGlobal;
+          const putSlider = parseInt(document.getElementById("tradeAmountPut").value);
+          let putRange = allData.filter(p => p.strike >= putMin && p.strike <= putMax)
+                        .sort((a, b) => b.strike - a.strike); // Sort from highest to lowest
+          let putTotal = putRange.reduce((sum, p) => sum + p.avail, 0);
+          let putTarget = putTotal * (putSlider / 100);
+          
+          // Track utilized liquidity by strike for both call and put
+          let callUtilized = {};
+          let putUtilized = {};
+          
+          // Process call liquidity (left to right)
+          let callCumulative = 0;
+          for (let p of callRange) {
+            if (callCumulative < callTarget) {
+              let use = Math.min(p.avail, callTarget - callCumulative);
+              callUtilized[p.strike] = use;
+              callCumulative += use;
+            } else {
+              callUtilized[p.strike] = 0;
+            }
+          }
+          
+          // Process put liquidity (right to left, high to low strikes)
+          let putCumulative = 0;
+          for (let p of putRange) {
+            if (putCumulative < putTarget) {
+              let use = Math.min(p.avail, putTarget - putCumulative);
+              putUtilized[p.strike] = use;
+              putCumulative += use;
+            } else {
+              putUtilized[p.strike] = 0;
+            }
+          }
+          
+          // Apply the utilized and remaining values
+          for (let i = 0; i < allData.length; i++) {
+            const p = allData[i];
+            if (p.strike >= callMin && p.strike <= callMax) {
+              utilized[i] = callUtilized[p.strike] || 0;
+              remaining[i] = p.avail - utilized[i];
+            } else if (p.strike >= putMin && p.strike <= putMax) {
+              utilized[i] = putUtilized[p.strike] || 0;
+              remaining[i] = p.avail - utilized[i];
+              } else {
+                utilized[i] = 0;
+                remaining[i] = p.avail;
+              }
+            }
+          
+          document.getElementById("callLiquidityDisplay").innerText =
+            callSlider + "% ($" + formatNumber(callTarget) + " / $" + formatNumber(callTotal) + ")";
+          document.getElementById("putLiquidityDisplay").innerText =
+            putSlider + "% ($" + formatNumber(putTarget) + " / $" + formatNumber(putTotal) + ")";
+        }
+        
+        // Make sure we have data to update the chart with
+        if (totalLiquidityChartInstance && allData.length > 0) {
+          console.log("Updating chart data");
+          
+          const utilizedTicks = window.processedLiquidityData.map((p, i) => ({ x: p.strike, y: utilized[i] }));
+          const remainingTicks = window.processedLiquidityData.map((p, i) => ({ x: p.strike, y: remaining[i] }));
+          
+          // Ensure we're working with valid data
+          console.log("Utilized ticks count:", utilizedTicks.length);
+          console.log("Remaining ticks count:", remainingTicks.length);
+          console.log("First utilized tick:", utilizedTicks.length > 0 ? JSON.stringify(utilizedTicks[0]) : "none");
+          
+          // Update both utilized and remaining datasets
+          if (totalLiquidityChartInstance.data.datasets.length >= 2) {
+          totalLiquidityChartInstance.data.datasets[0].data = utilizedTicks;
+          totalLiquidityChartInstance.data.datasets[1].data = remainingTicks;
+            
+            // Make sure all datasets are visible and correctly configured
+            totalLiquidityChartInstance.data.datasets.forEach((dataset, index) => {
+              dataset.hidden = false;
+              console.log(`Dataset ${index} visibility:`, !dataset.hidden);
+              
+              // Ensure proper bar thickness
+              if (!dataset.barThickness || dataset.barThickness < 2) {
+                dataset.barThickness = 2;
+              }
+              
+              // Ensure proper stacking
+              dataset.stack = "liquidity";
+            });
+            
+            // Always ensure mark price annotation exists
+            if (totalLiquidityChartInstance.options && 
+                totalLiquidityChartInstance.options.plugins && 
+                totalLiquidityChartInstance.options.plugins.annotation) {
+              
+              if (!totalLiquidityChartInstance.options.plugins.annotation.annotations) {
+                totalLiquidityChartInstance.options.plugins.annotation.annotations = {};
+              }
+              
+              // Create or update the mark price line
+              totalLiquidityChartInstance.options.plugins.annotation.annotations.markPriceLine = {
+                type: "line",
+                mode: "vertical",
+                scaleID: "x",
+                value: spotPriceGlobal,
+                borderColor: "#85C1E9",
+                borderWidth: 2,
+                label: { enabled: true, content: "Mark Price", color: "#fff" }
+              };
+            }
+            
+            // Use immediate update with minimal animation
+          totalLiquidityChartInstance.update("none");
+            console.log("Chart colors updated successfully");
+            
+            // Verify datasets after update
+            setTimeout(() => {
+              if (totalLiquidityChartInstance && totalLiquidityChartInstance.data) {
+                console.log("After update - Dataset 0 length:", 
+                          totalLiquidityChartInstance.data.datasets[0].data.length,
+                          "Dataset 1 length:", 
+                          totalLiquidityChartInstance.data.datasets[1].data.length);
+              }
+            }, 100);
+          } else {
+            console.error("Chart doesn't have the expected datasets");
+          }
+        } else {
+          console.error("Chart not available or no data to display");
+        }
+      }
+      
+      /******************************************************
+       * ENSURE MARK PRICE LINE IS VISIBLE
+       ******************************************************/
+      
+        if (totalLiquidityChartInstance && 
+            totalLiquidityChartInstance.options && 
+            totalLiquidityChartInstance.options.plugins && 
+            totalLiquidityChartInstance.options.plugins.annotation) {
+          
+          if (!totalLiquidityChartInstance.options.plugins.annotation.annotations) {
+            totalLiquidityChartInstance.options.plugins.annotation.annotations = {};
+          }
+          
+          totalLiquidityChartInstance.options.plugins.annotation.annotations.markPriceLine = {
+            type: "line",
+            mode: "vertical",
+            scaleID: "x",
+            value: spotPriceGlobal,
+            borderColor: "#85C1E9", 
+            borderWidth: 2,
+            label: { enabled: true, content: "Mark Price", color: "#fff" }
+          };
+          
+          totalLiquidityChartInstance.update('none');
+        }
+      
       
       /******************************************************
        * RENDER LIQUIDITY CHART (Options)
        ******************************************************/
       async function renderLiquidityChart() {
+        console.log("Rendering liquidity chart");
         const market = document.getElementById("marketSelect").value;
         let ticks = await fetchLiquidityData(market);
         const optionType = document.getElementById("optionType").value;
+        
+        console.log("Fetch complete, processing data");
+        console.log("Ticks length:", ticks.length);
+        
         let processed = ticks.map(t => {
           let avail = t.availableLiquidity;
           let tot = t.totalLiquidity;
@@ -563,18 +1635,31 @@
           }
           return { strike: t.strike, avail, locked: tot - avail };
         });
+        
         window.processedLiquidityData = processed;
+        console.log("Processed data length:", processed.length);
+        
         const strikes = processed.map(p => p.strike);
         const dataMin = Math.min(...strikes);
         const dataMax = Math.max(...strikes);
         let xMin = zoomPreset ? zoomPreset.min : dataMin;
         let xMax = zoomPreset ? zoomPreset.max : dataMax;
-        const availableData = processed.map(p => ({ x: p.strike, y: p.avail }));
+        
+        console.log("Data range:", dataMin, "to", dataMax);
+        console.log("Display range:", xMin, "to", xMax);
+        
         const lockedData = processed.map(p => ({ x: p.strike, y: p.locked }));
+        const initialUtilized = processed.map(p => ({ x: p.strike, y: 0 }));
+        const initialRemaining = processed.map(p => ({ x: p.strike, y: p.avail }));
+        
         const container = document.getElementById("topChartContainer");
         container.innerHTML = `<canvas id="liquidityChart" width="600" height="250"></canvas>`;
         const ctx = document.getElementById("liquidityChart").getContext("2d");
+        
+        // Make sure to destroy any existing chart
         destroyTotalLiquidityChart();
+        
+        // Define mark price line annotation
         const annotationConfig = {
           markPriceLine: {
             type: "line",
@@ -586,23 +1671,36 @@
             label: { enabled: true, content: "Mark Price", color: "#fff" }
           }
         };
+        
+        console.log("Creating new chart instance");
+        // Create new chart with carefully defined datasets
         totalLiquidityChartInstance = new Chart(ctx, {
           type: "bar",
           data: {
             datasets: [
               {
-                label: "Available Liquidity (USD)",
-                data: availableData,
+                label: "Utilized Liquidity (USD)",
+                data: initialUtilized,
+                backgroundColor: "rgba(128,0,128,0.8)",
+                stack: "liquidity",
+                barThickness: 2,
+                hidden: false
+              },
+              {
+                label: "Remaining Liquidity (USD)",
+                data: initialRemaining,
                 backgroundColor: "rgba(15,255,149,0.8)",
                 stack: "liquidity",
-                barThickness: 2
+                barThickness: 2,
+                hidden: false
               },
               {
                 label: "Locked Liquidity (USD)",
                 data: lockedData,
                 backgroundColor: "rgba(255,99,132,0.8)",
                 stack: "liquidity",
-                barThickness: 2
+                barThickness: 2,
+                hidden: false
               }
             ]
           },
@@ -636,15 +1734,25 @@
           },
           plugins: [draggableRangePlugin]
         });
+        
+        console.log("Chart instance created");
+        console.log("Datasets loaded:", 
+                    totalLiquidityChartInstance.data.datasets.length,
+                    "Dataset 0 points:", 
+                    totalLiquidityChartInstance.data.datasets[0].data.length);
+        
+        // Update the chart colors based on current slider values
+        updateChartColors();
+        console.log("Chart rendering complete");
       }
       
       /******************************************************
-       * RENDER PnL CHART (Options)
+       * RENDER PnL CHART (Options – Modal)
        ******************************************************/
       function renderPnLChart() {
-        const container = document.getElementById("topChartContainer");
-        container.innerHTML = `<canvas id="topChartCanvas" width="600" height="250"></canvas>`;
-        const ctx = document.getElementById("topChartCanvas").getContext("2d");
+        const container = document.getElementById("modalPnL");
+        container.innerHTML = `<canvas id="modalPnLChart" width="600" height="250"></canvas>`;
+        const ctx = document.getElementById("modalPnLChart").getContext("2d");
         destroyPnLChart();
         let annotations = {
           markPriceLine: {
@@ -666,7 +1774,7 @@
             label: { enabled: true, content: "Total Premium", color: "#fff" }
           }
         };
-        if (tradeData.optionType === "straddle") {
+        if (tradeData.optionType === "strangle") {
           if (tradeData.callExposureStrike != null) {
             annotations.callExposureLine = {
               type: "line",
@@ -747,469 +1855,11 @@
       }
       
       /******************************************************
-       * LOAD TRADE PAGE (Options)
+       * RENDER MODAL TABLE (Options – Modal)
        ******************************************************/
-      async function loadTradePage() {
-        lastUpdateTime = Date.now();
-        const marketChoice = document.getElementById("marketSelect").value;
-        const ttlSeconds = parseInt(document.getElementById("expirySelect").value);
-        let optionType = document.getElementById("optionType").value;
-        const tradeAmount = parseFloat(document.getElementById("tradeAmount").value);
-        const userAddress = "0xf8859BAae87Eac4C7EE0b81499eDDD99c778FBEB";
-        const optionMarket = marketConfig[marketChoice]
-          ? marketConfig[marketChoice].optionMarket
-          : marketConfig["S"].optionMarket;
-        spotPriceGlobal = await fetchSpotPrice(marketChoice);
-        
-        // Reset selectors to -5%/+5%
-        document.getElementById("minStrikeInput").value = (spotPriceGlobal * 0.95).toFixed(4);
-        document.getElementById("maxStrikeInput").value = (spotPriceGlobal * 1.05).toFixed(4);
-        rangeMin = spotPriceGlobal * 0.95;
-        rangeMax = spotPriceGlobal * 1.05;
-        
-        let tradeAmountCall = tradeAmount;
-        let tradeAmountPut = tradeAmount;
-        let chosenCall = [];
-        let chosenPut = [];
-        if (optionType === "straddle") {
-          tradeAmountCall = tradeAmountPut = tradeAmount / 2;
-        }
-        
-        const liquidityUrl = `https://api.stryke.xyz/clamm/strikes-chain?chainId=146&optionMarket=${optionMarket}&callsReach=800&putsReach=800&filterDeprecated=true`;
-        try {
-          const liquidityResponse = await fetch(liquidityUrl);
-          const liquidityData = await liquidityResponse.json();
-          let allTicks = [];
-          liquidityData.forEach(item => {
-            for (let key in item) {
-              const data = item[key][0];
-              const decimals = data.token.decimals;
-              const scaledAvail =
-                parseFloat(data.meta.availableTokenLiquidity) / Math.pow(10, decimals);
-              const scaledTotal =
-                parseFloat(data.meta.totalTokenLiquidity) / Math.pow(10, decimals);
-              allTicks.push({
-                strike: parseFloat(key),
-                availableLiquidity: scaledAvail,
-                totalLiquidity: scaledTotal,
-                tokenSymbol: data.token.symbol,
-                hook: data.meta.hook
-              });
-            }
-          });
-          window.liquidityLog = allTicks;
-          
-          let allowedHooks =
-            ttlSeconds < 604800
-              ? [intradayHook.toLowerCase(), weeklyHook.toLowerCase()]
-              : [weeklyHook.toLowerCase()];
-          let filteredTicksCall = [];
-          let filteredTicksPut = [];
-          if (optionType === "call" || optionType === "straddle") {
-            filteredTicksCall = window.liquidityLog
-              .filter(
-                tick =>
-                  tick.strike >=
-                    Math.max(parseFloat(document.getElementById("minStrikeInput").value), spotPriceGlobal) &&
-                  (tick.tokenSymbol.toLowerCase().includes("ws") ||
-                    tick.tokenSymbol.toLowerCase().includes("weth")) &&
-                  allowedHooks.includes(tick.hook.toLowerCase())
-              )
-              .sort((a, b) => a.strike - b.strike);
-          }
-          if (optionType === "put" || optionType === "straddle") {
-            filteredTicksPut = window.liquidityLog
-              .filter(
-                tick =>
-                  tick.strike <=
-                    Math.min(parseFloat(document.getElementById("maxStrikeInput").value), spotPriceGlobal) &&
-                  tick.tokenSymbol.toLowerCase().includes("usdc") &&
-                  allowedHooks.includes(tick.hook.toLowerCase())
-              )
-              .sort((a, b) => b.strike - a.strike);
-          }
-          
-          if (optionType === "straddle") {
-            let cumulativeCall = 0;
-            for (let i = 0; i < filteredTicksCall.length; i++) {
-              if (cumulativeCall >= tradeAmountCall) break;
-              let tick = { ...filteredTicksCall[i] };
-              let needed = tradeAmountCall - cumulativeCall;
-              if (tick.availableLiquidity >= needed) {
-                tick.usedLiquidity = needed;
-                cumulativeCall += needed;
-              } else {
-                tick.usedLiquidity = tick.availableLiquidity;
-                cumulativeCall += tick.availableLiquidity;
-              }
-              chosenCall.push(tick);
-            }
-            let cumulativePut = 0;
-            for (let i = 0; i < filteredTicksPut.length; i++) {
-              if (cumulativePut >= tradeAmountPut) break;
-              let tick = { ...filteredTicksPut[i] };
-              let needed = tradeAmountPut - cumulativePut;
-              if (tick.availableLiquidity >= needed) {
-                tick.usedLiquidity = needed;
-                cumulativePut += needed;
-              } else {
-                tick.usedLiquidity = tick.availableLiquidity;
-                cumulativePut += tick.availableLiquidity;
-              }
-              chosenPut.push(tick);
-            }
-            tradeData.chosenTicksCalls = chosenCall;
-            tradeData.chosenTicksPuts = chosenPut;
-            tradeData.callExposureStrike = chosenCall.length > 0 ? chosenCall[chosenCall.length - 1].strike : null;
-            tradeData.putExposureStrike = chosenPut.length > 0 ? chosenPut[chosenPut.length - 1].strike : null;
-          } else if (optionType === "call") {
-            let cumulativeCall = 0;
-            for (let i = 0; i < filteredTicksCall.length; i++) {
-              if (cumulativeCall >= tradeAmount) break;
-              let tick = { ...filteredTicksCall[i] };
-              let needed = tradeAmount - cumulativeCall;
-              if (tick.availableLiquidity >= needed) {
-                tick.usedLiquidity = needed;
-                cumulativeCall += needed;
-              } else {
-                tick.usedLiquidity = tick.availableLiquidity;
-                cumulativeCall += tick.availableLiquidity;
-              }
-              chosenCall.push(tick);
-            }
-            tradeData.chosenTicks = chosenCall;
-            tradeData.exposureStrike = chosenCall[chosenCall.length - 1].strike;
-          } else if (optionType === "put") {
-            let cumulativePut = 0;
-            for (let i = 0; i < filteredTicksPut.length; i++) {
-              if (cumulativePut >= tradeAmount) break;
-              let tick = { ...filteredTicksPut[i] };
-              let needed = tradeAmount - cumulativePut;
-              if (tick.availableLiquidity >= needed) {
-                tick.usedLiquidity = needed;
-                cumulativePut += needed;
-              } else {
-                tick.usedLiquidity = tick.availableLiquidity;
-                cumulativePut += tick.availableLiquidity;
-              }
-              chosenPut.push(tick);
-            }
-            tradeData.chosenTicks = chosenPut;
-            tradeData.exposureStrike = chosenPut[chosenPut.length - 1].strike;
-          }
-          
-          // Fetch premiums:
-          const premiumPromises = [];
-          if (optionType === "straddle") {
-            chosenCall.forEach(tick => {
-              const tickQuoteUrl = `https://api.stryke.xyz/clamm/purchase/quote?chainId=146&optionMarket=${optionMarket}&user=${userAddress}&strike=${tick.strike}&markPrice=${spotPriceGlobal}&type=call&amount=${tick.usedLiquidity}&ttl=${ttlSeconds}`;
-              premiumPromises.push(
-                fetch(tickQuoteUrl)
-                  .then(res => res.json())
-                  .then(data => {
-                    const decimals = data.token.decimals;
-                    return (parseFloat(data.premium) + parseFloat(data.fees || 0)) / Math.pow(10, decimals);
-                  })
-                  .catch(err => {
-                    console.error("Error fetching premium for tick", tick.strike, err);
-                    return 0;
-                  })
-              );
-            });
-            chosenPut.forEach(tick => {
-              const tickQuoteUrl = `https://api.stryke.xyz/clamm/purchase/quote?chainId=146&optionMarket=${optionMarket}&user=${userAddress}&strike=${tick.strike}&markPrice=${spotPriceGlobal}&type=put&amount=${tick.usedLiquidity}&ttl=${ttlSeconds}`;
-              premiumPromises.push(
-                fetch(tickQuoteUrl)
-                  .then(res => res.json())
-                  .then(data => {
-                    const decimals = data.token.decimals;
-                    return (parseFloat(data.premium) + parseFloat(data.fees || 0)) / Math.pow(10, decimals);
-                  })
-                  .catch(err => {
-                    console.error("Error fetching premium for tick", tick.strike, err);
-                    return 0;
-                  })
-              );
-            });
-          } else {
-            tradeData.chosenTicks.forEach(tick => {
-              const qType = optionType;
-              const tickQuoteUrl = `https://api.stryke.xyz/clamm/purchase/quote?chainId=146&optionMarket=${optionMarket}&user=${userAddress}&strike=${tick.strike}&markPrice=${spotPriceGlobal}&type=${qType}&amount=${tick.usedLiquidity}&ttl=${ttlSeconds}`;
-              premiumPromises.push(
-                fetch(tickQuoteUrl)
-                  .then(res => res.json())
-                  .then(data => {
-                    const decimals = data.token.decimals;
-                    return (parseFloat(data.premium) + parseFloat(data.fees || 0)) / Math.pow(10, decimals);
-                  })
-                  .catch(err => {
-                    console.error("Error fetching premium for tick", tick.strike, err);
-                    return 0;
-                  })
-              );
-            });
-          }
-          const chosenPremiums = await Promise.all(premiumPromises);
-          if (optionType === "straddle") {
-            let idx = 0;
-            chosenCall.forEach(tick => {
-              tick.premiumCost = chosenPremiums[idx++];
-            });
-            chosenPut.forEach(tick => {
-              tick.premiumCost = chosenPremiums[idx++];
-            });
-          } else {
-            tradeData.chosenTicks.forEach((tick, idx) => {
-              tick.premiumCost = chosenPremiums[idx];
-            });
-          }
-          
-          // Compute cumulative payoff curve:
-          let prices = [];
-          let payoffCurve = [];
-          if (optionType === "straddle") {
-            let callStrikes = chosenCall.length > 0 ? chosenCall.map(t => t.strike) : [spotPriceGlobal];
-            let putStrikes = chosenPut.length > 0 ? chosenPut.map(t => t.strike) : [spotPriceGlobal];
-            let lowTick = Math.min(...callStrikes, ...putStrikes);
-            let highTick = Math.max(...callStrikes, ...putStrikes);
-            const steps = 50;
-            const stepSize = (highTick * 1.05 - lowTick * 0.95) / steps;
-            for (let p = lowTick * 0.95; p <= highTick * 1.05; p += stepSize) {
-              prices.push(p);
-              let callPayoff = 0;
-              let putPayoff = 0;
-              chosenCall.forEach(t => {
-                callPayoff += Math.max(p - t.strike, 0) * t.usedLiquidity;
-              });
-              chosenPut.forEach(t => {
-                putPayoff += Math.max(t.strike - p, 0) * t.usedLiquidity;
-              });
-              payoffCurve.push(callPayoff + putPayoff);
-            }
-          } else if (optionType === "call") {
-            let lowTick = Math.min(...chosenCall.map(t => t.strike));
-            let highTick = Math.max(...chosenCall.map(t => t.strike));
-            const steps = 50;
-            const stepSize = (highTick * 1.05 - lowTick * 0.95) / steps;
-            for (let p = lowTick * 0.95; p <= highTick * 1.05; p += stepSize) {
-              prices.push(p);
-              let cumPayoff = 0;
-              chosenCall.forEach(t => {
-                cumPayoff += Math.max(p - t.strike, 0) * t.usedLiquidity;
-              });
-              payoffCurve.push(cumPayoff);
-            }
-          } else if (optionType === "put") {
-            let lowTick = Math.min(...chosenPut.map(t => t.strike));
-            let highTick = Math.max(...chosenPut.map(t => t.strike));
-            const steps = 50;
-            const stepSize = (highTick * 1.05 - lowTick * 0.95) / steps;
-            for (let p = lowTick * 0.95; p <= highTick * 1.05; p += stepSize) {
-              prices.push(p);
-              let cumPayoff = 0;
-              chosenPut.forEach(t => {
-                cumPayoff += Math.max(t.strike - p, 0) * t.usedLiquidity;
-              });
-              payoffCurve.push(cumPayoff);
-            }
-          }
-          tradeData = {
-            ...tradeData,
-            underlyingPrices: prices,
-            payoffCurve: payoffCurve,
-            totalPremium: (optionType === "straddle"
-              ? chosenCall.concat(chosenPut)
-              : tradeData.chosenTicks
-            ).reduce((sum, tick) => sum + tick.premiumCost, 0),
-            optionType: optionType
-          };
-          updateTopPanelView();
-        } catch (error) {
-          console.error("Error fetching or processing data:", error);
-        }
-      }
-      
-      /******************************************************
-       * LOAD PERP TRADE PAGE
-       ******************************************************/
-      async function loadPerpTradePage() {
-        lastUpdateTime = Date.now();
-        // Use perp controls
-        const marketChoice = document.getElementById("marketSelectPerp").value;
-        const tradeAmount = parseFloat(document.getElementById("tradeAmountPerp").value);
-        const positionType = document.getElementById("toggleLong").classList.contains("active")
-          ? "long"
-          : "short";
-        const userAddress = "0xf8859BAae87Eac4C7EE0b81499eDDD99c778FBEB";
-        const optionMarket = marketConfig[marketChoice]
-          ? marketConfig[marketChoice].optionMarket
-          : marketConfig["S"].optionMarket;
-        spotPriceGlobal = await fetchSpotPrice(marketChoice);
-      
-        // Fetch liquidity data using same API
-        const liquidityData = await fetchLiquidityData(marketChoice);
-        let filteredTicks = [];
-        if (positionType === "long") {
-          filteredTicks = liquidityData.filter(t => t.strike >= spotPriceGlobal);
-          filteredTicks.sort((a, b) => a.strike - b.strike);
-        } else {
-          filteredTicks = liquidityData.filter(t => t.strike <= spotPriceGlobal);
-          filteredTicks.sort((a, b) => b.strike - a.strike);
-        }
-      
-        let cumulative = 0;
-        let chosenTicks = [];
-        for (let i = 0; i < filteredTicks.length && cumulative < tradeAmount; i++) {
-          let tick = { ...filteredTicks[i] };
-          let needed = tradeAmount - cumulative;
-          if (tick.availableLiquidity >= needed) {
-            tick.usedLiquidity = needed;
-            cumulative += needed;
-          } else {
-            tick.usedLiquidity = tick.availableLiquidity;
-            cumulative += tick.availableLiquidity;
-          }
-          chosenTicks.push(tick);
-        }
-      
-        const ttlSeconds = 86400; // default TTL for perp trades
-        const premiumPromises = chosenTicks.map(tick => {
-          // Use "call" for long and "put" for short
-          const qType = positionType === "long" ? "call" : "put";
-          const tickQuoteUrl = `https://api.stryke.xyz/clamm/purchase/quote?chainId=146&optionMarket=${optionMarket}&user=${userAddress}&strike=${tick.strike}&markPrice=${spotPriceGlobal}&type=${qType}&amount=${tick.usedLiquidity}&ttl=${ttlSeconds}`;
-          return fetch(tickQuoteUrl)
-            .then(res => res.json())
-            .then(data => {
-              const decimals = data.token.decimals;
-              return (parseFloat(data.premium) + parseFloat(data.fees || 0)) / Math.pow(10, decimals);
-            })
-            .catch(err => {
-              console.error("Error fetching premium for tick", tick.strike, err);
-              return 0;
-            });
-        });
-        const chosenPremiums = await Promise.all(premiumPromises);
-        chosenTicks.forEach((tick, idx) => {
-          tick.premiumCost = chosenPremiums[idx];
-        });
-      
-        // Compute cumulative payoff curve for Perp
-        let prices = [];
-        let payoffCurve = [];
-        let lowTick = Math.min(...chosenTicks.map(t => t.strike));
-        let highTick = Math.max(...chosenTicks.map(t => t.strike));
-        let chartMin, chartMax;
-        if (positionType === "long") {
-          chartMin = spotPriceGlobal * 0.95;
-          chartMax = highTick * 1.05;
-        } else {
-          chartMin = lowTick * 0.95;
-          chartMax = spotPriceGlobal * 1.05;
-        }
-        const steps = 50;
-        const stepSize = (chartMax - chartMin) / steps;
-        for (let p = chartMin; p <= chartMax; p += stepSize) {
-          prices.push(p);
-          let cumulativePayoff = 0;
-          if (positionType === "long") {
-            chosenTicks.forEach(t => {
-              cumulativePayoff += Math.max(p - t.strike, 0) * t.usedLiquidity;
-            });
-          } else {
-            chosenTicks.forEach(t => {
-              cumulativePayoff += Math.max(t.strike - p, 0) * t.usedLiquidity;
-            });
-          }
-          payoffCurve.push(cumulativePayoff);
-        }
-      
-        tradeData = {
-          chosenTicks: chosenTicks,
-          underlyingPrices: prices,
-          payoffCurve: payoffCurve,
-          totalPremium: chosenTicks.reduce((sum, tick) => sum + tick.premiumCost, 0),
-          positionType: positionType,
-          productType: "perp"
-        };
-        updateTopPanelView();
-      }
-      
-      /******************************************************
-       * FETCH FUNCTIONS
-       ******************************************************/
-      async function fetchSpotPrice(market) {
-        const config = marketConfig[market] || marketConfig["S"];
-        const url = config.spotApi;
-        try {
-          const resp = await fetch(url);
-          const data = await resp.json();
-          console.log("Fetched markPrice:", data.markPrice);
-          return parseFloat(data.markPrice);
-        } catch (err) {
-          console.error("Error fetching spot price:", err);
-          return 0;
-        }
-      }
-      
-      async function fetchLiquidityData(market) {
-        const config = marketConfig[market] || marketConfig["S"];
-        const liquidityUrl = `https://api.stryke.xyz/clamm/strikes-chain?chainId=146&optionMarket=${config.optionMarket}&callsReach=800&putsReach=800&filterDeprecated=true`;
-        const resp = await fetch(liquidityUrl);
-        const data = await resp.json();
-        let ticks = [];
-        data.forEach((item) => {
-          for (let key in item) {
-            const d = item[key][0];
-            const decimals = d.token.decimals;
-            const avail = parseFloat(d.meta.availableTokenLiquidity) / Math.pow(10, decimals);
-            const tot = parseFloat(d.meta.totalTokenLiquidity) / Math.pow(10, decimals);
-            ticks.push({ 
-              strike: parseFloat(key), 
-              availableLiquidity: avail, 
-              totalLiquidity: tot,
-              tokenSymbol: d.token.symbol 
-            });
-          }
-        });
-        ticks.sort((a, b) => a.strike - b.strike);
-        if (ticks.length > 0) {
-          globalMinTick = ticks[0].strike;
-          globalMaxTick = ticks[ticks.length - 1].strike;
-        }
-        return ticks;
-      }
-      
-      /******************************************************
-       * UPDATE TOP PANEL VIEW
-       ******************************************************/
-      function updateTopPanelView() {
-        const container = document.getElementById("topChartContainer");
-        container.innerHTML = "";
-        if (currentProductType === "options") {
-          if (currentTopView === "Liquidity") {
-            renderLiquidityChart();
-          } else if (currentTopView === "Table") {
-            renderOptionsTable();
-          } else if (currentTopView === "PnL") {
-            renderPnLChart();
-          }
-        } else if (currentProductType === "perp") {
-          if (currentTopView === "Liquidity") {
-            renderPerpDepthChart();
-          } else if (currentTopView === "Table") {
-            renderPerpTable();
-          } else if (currentTopView === "PnL") {
-            renderPerpPnLChart();
-          }
-        }
-      }
-      
-      /******************************************************
-       * RENDER OPTIONS TABLE
-       ******************************************************/
-      function renderOptionsTable() {
+      function renderModalTable() {
         let html = "";
-        if (tradeData.optionType === "straddle") {
+        if (tradeData.optionType === "strangle") {
           html += `<h3 class="text-white">Call Purchases</h3>
             <table id="liquidityTable" class="min-w-full divide-y divide-gray-400 dark:divide-gray-700 text-sm">
               <thead class="table-3d">
@@ -1250,9 +1900,9 @@
               </tr>`;
             });
             html += `</table>
-                  </details>
-                </td>
-              </tr>`;
+                </details>
+              </td>
+            </tr>`;
           } else {
             html += `<tr><td colspan="5" class="px-4 py-2">No call data available.</td></tr>`;
           }
@@ -1298,9 +1948,9 @@
               </tr>`;
             });
             html += `</table>
-                  </details>
-                </td>
-              </tr>`;
+                </details>
+              </td>
+            </tr>`;
           } else {
             html += `<tr><td colspan="5" class="px-4 py-2">No put data available.</td></tr>`;
           }
@@ -1345,20 +1995,20 @@
               </tr>`;
             });
             htmlSingle += `</table>
-                  </details>
-                </td>
-              </tr>`;
+                </details>
+              </td>
+            </tr>`;
           } else {
             htmlSingle += `<tr><td colspan="5" class="px-4 py-2">No data available.</td></tr>`;
           }
           htmlSingle += `</tbody></table>`;
           html = htmlSingle;
         }
-        document.getElementById("bottomViewContainer").innerHTML = html;
+        document.getElementById("modalTable").innerHTML = html;
       }
       
       /******************************************************
-       * RENDER PERP CHARTS & TABLES
+       * PERP FUNCTIONS (Unchanged)
        ******************************************************/
       function renderPerpDepthChart() {
         const container = document.getElementById("topChartContainer");
@@ -1511,65 +2161,87 @@
       }
       
       /******************************************************
-       * EVENT LISTENERS & INITIALIZATION
+       * MODAL FUNCTIONS
        ******************************************************/
-      // Zoom preset buttons
-      document.querySelectorAll(".zoom-preset-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const preset = btn.getAttribute("data-preset");
-          setZoomPreset(preset);
-        });
+      function openModal() {
+        // Show the Table tab by default
+        document.getElementById("modalTable").classList.remove("hidden");
+        document.getElementById("modalPnL").classList.add("hidden");
+        document.getElementById("tabTable").classList.add("active");
+        document.getElementById("tabPnL").classList.remove("active");
+        renderModalTable();
+        document.getElementById("modalPopup").classList.add("active");
+      }
+      
+      function closeModal() {
+        document.getElementById("modalPopup").classList.remove("active");
+      }
+      
+      document.getElementById("modalPopup").addEventListener("click", (e) => {
+        if (e.target === document.getElementById("modalPopup")) {
+          closeModal();
+        }
+      });
+      document.getElementById("modalClose").addEventListener("click", closeModal);
+      document.getElementById("tabTable").addEventListener("click", () => {
+        document.getElementById("modalTable").classList.remove("hidden");
+        document.getElementById("modalPnL").classList.add("hidden");
+        document.getElementById("tabTable").classList.add("active");
+        document.getElementById("tabPnL").classList.remove("active");
+        renderModalTable();
+      });
+      document.getElementById("tabPnL").addEventListener("click", () => {
+        document.getElementById("modalPnL").classList.remove("hidden");
+        document.getElementById("modalTable").classList.add("hidden");
+        document.getElementById("tabPnL").classList.add("active");
+        document.getElementById("tabTable").classList.remove("active");
+        renderPnLChart();
       });
       
-      // 3-way view toggle (Liquidity, Table, PnL)
-      document.getElementById("toggleLiquidity").addEventListener("click", () => {
-        currentTopView = "Liquidity";
-        document.querySelectorAll(".threeway-toggle button").forEach(btn => btn.classList.remove("active"));
-        document.getElementById("toggleLiquidity").classList.add("active");
-        updateTopPanelView();
+      /******************************************************
+       * SUBMIT BUTTONS
+       ******************************************************/
+      document.getElementById("submitBtn").addEventListener("click", async () => {
+        if (currentProductType === "options") {
+          // Do not reset inputs on submit; load trade data and open modal
+          await loadTradePage(false);
+          openModal();
+        }
       });
-      document.getElementById("toggleTable").addEventListener("click", () => {
-        currentTopView = "Table";
-        document.querySelectorAll(".threeway-toggle button").forEach(btn => btn.classList.remove("active"));
-        document.getElementById("toggleTable").classList.add("active");
-        updateTopPanelView();
+      document.getElementById("submitBtnPerp").addEventListener("click", () => {
+        if (currentProductType === "perp") {
+          loadPerpTradePage();
+        }
       });
-      document.getElementById("togglePnL").addEventListener("click", () => {
-        currentTopView = "PnL";
-        document.querySelectorAll(".threeway-toggle button").forEach(btn => btn.classList.remove("active"));
-        document.getElementById("togglePnL").classList.add("active");
-        updateTopPanelView();
-      });
-      
-      document.getElementById("logButton").addEventListener("click", () => {
-        useLogScale = !useLogScale;
-        document.getElementById("logButton").classList.toggle("active", useLogScale);
-        if (currentProductType === "options" && currentTopView === "Liquidity") {
-          renderLiquidityChart();
+      document.getElementById("refreshButton").addEventListener("click", () => {
+        if (currentProductType === "options") {
+          loadTradePage(true);
+        } else if (currentProductType === "perp") {
+          loadPerpTradePage();
         }
       });
       
-      // Product Type Toggle event listeners
+      /******************************************************
+       * PRODUCT TYPE TOGGLES
+       ******************************************************/
       document.getElementById("toggleOptions").addEventListener("click", () => {
         currentProductType = "options";
         document.getElementById("toggleOptions").classList.add("active");
         document.getElementById("togglePerp").classList.remove("active");
-        // Show options controls; hide perp controls
         document.getElementById("tradeControlsOptions").style.display = "flex";
         document.getElementById("tradeControlsPerp").style.display = "none";
+        document.getElementById("zoomContainer").style.display = "flex";
         updateTopPanelView();
       });
       document.getElementById("togglePerp").addEventListener("click", () => {
         currentProductType = "perp";
         document.getElementById("togglePerp").classList.add("active");
         document.getElementById("toggleOptions").classList.remove("active");
-        // Hide options controls; show perp controls
         document.getElementById("tradeControlsOptions").style.display = "none";
         document.getElementById("tradeControlsPerp").style.display = "flex";
+        document.getElementById("zoomContainer").style.display = "none";
         updateTopPanelView();
       });
-      
-      // Perp Position Toggle event listeners
       document.getElementById("toggleLong").addEventListener("click", () => {
         document.getElementById("toggleLong").classList.add("active");
         document.getElementById("toggleShort").classList.remove("active");
@@ -1579,102 +2251,1690 @@
         document.getElementById("toggleLong").classList.remove("active");
       });
       
-      // Submit buttons
-      document.getElementById("submitBtn").addEventListener("click", () => {
-        if (currentProductType === "options") {
-          loadTradePage();
-        }
-      });
-      document.getElementById("submitBtnPerp").addEventListener("click", () => {
-        if (currentProductType === "perp") {
-          loadPerpTradePage();
-        }
-      });
-      
-      document.getElementById("refreshButton").addEventListener("click", () => {
-        if (currentProductType === "options") {
-          loadTradePage();
-        } else if (currentProductType === "perp") {
-          loadPerpTradePage();
-        }
-      });
-      
-      // Market change for options controls
+      /******************************************************
+       * MARKET & OPTION TYPE CHANGES
+       ******************************************************/
       document.getElementById("marketSelect").addEventListener("change", async () => {
-        await loadTradePage();
-        document.getElementById("minStrikeInput").value = (spotPriceGlobal * 0.95).toFixed(4);
-        document.getElementById("maxStrikeInput").value = (spotPriceGlobal * 1.05).toFixed(4);
-        rangeMin = spotPriceGlobal * 0.95;
-        rangeMax = spotPriceGlobal * 1.05;
+        zoomPreset = null;
+        await loadTradePage(true);
+        updateTopPanelView();
+        
+        // Reset zoom toggle buttons to match the chart's "full" state
+        document.querySelectorAll(".zoom-preset-btn").forEach(btn => btn.classList.remove("active"));
+        const fullZoomBtn = document.querySelector(`.zoom-preset-btn[data-preset="full"]`);
+        if (fullZoomBtn) fullZoomBtn.classList.add("active");
       });
-      
-      // Option type change
       document.getElementById("optionType").addEventListener("change", () => {
-        const optType = document.getElementById("optionType").value;
+        // Update the toggle UI to reflect the new option type
+        updateOptionTypeToggle();
+        
         if (spotPriceGlobal) {
+          const optType = document.getElementById("optionType").value;
+          document.getElementById("optionDynamicControls").style.display = "block";
           if (optType === "call") {
-            document.getElementById("minStrikeInput").value = spotPriceGlobal.toFixed(4);
-            document.getElementById("maxStrikeInput").value = (spotPriceGlobal * 1.05).toFixed(4);
-            rangeMin = spotPriceGlobal;
-            rangeMax = spotPriceGlobal * 1.05;
+            document.getElementById("callMinInput").value = spotPriceGlobal.toFixed(4);
+            document.getElementById("callMaxInput").value = (spotPriceGlobal * 1.05).toFixed(4);
+            document.getElementById("callControls").style.display = "block";
+            document.getElementById("putControls").style.display = "none";
           } else if (optType === "put") {
-            document.getElementById("minStrikeInput").value = (spotPriceGlobal * 0.95).toFixed(4);
-            document.getElementById("maxStrikeInput").value = spotPriceGlobal.toFixed(4);
-            rangeMin = spotPriceGlobal * 0.95;
-            rangeMax = spotPriceGlobal;
-          } else if (optType === "straddle") {
-            document.getElementById("minStrikeInput").value = (spotPriceGlobal * 0.95).toFixed(4);
-            document.getElementById("maxStrikeInput").value = (spotPriceGlobal * 1.05).toFixed(4);
-            rangeMin = spotPriceGlobal * 0.95;
-            rangeMax = spotPriceGlobal * 1.05;
+            document.getElementById("putMaxInput").value = spotPriceGlobal.toFixed(4);
+            document.getElementById("putMinInput").value = (spotPriceGlobal * 0.95).toFixed(4);
+            document.getElementById("callControls").style.display = "none";
+            document.getElementById("putControls").style.display = "block";
+          } else if (optType === "strangle") {
+            document.getElementById("callMinInput").value = spotPriceGlobal.toFixed(4);
+            document.getElementById("callMaxInput").value = (spotPriceGlobal * 1.05).toFixed(4);
+            document.getElementById("putMaxInput").value = spotPriceGlobal.toFixed(4);
+            document.getElementById("putMinInput").value = (spotPriceGlobal * 0.95).toFixed(4);
+            document.getElementById("callControls").style.display = "block";
+            document.getElementById("putControls").style.display = "block";
           }
-          if (currentTopView === "Liquidity") renderLiquidityChart();
+          updateTopPanelView();
+          document.getElementById("tradeAmountCall").value = 0;
+          document.getElementById("callLiquidityDisplay").innerText = "0% ($0)";
+          document.getElementById("tradeAmountPut").value = 0;
+          document.getElementById("putLiquidityDisplay").innerText = "0% ($0)";
         }
       });
       
-      document.getElementById("minStrikeInput").addEventListener("change", (e) => {
+      document.getElementById("callMinInput").addEventListener("change", (e) => {
         let val = parseFloat(e.target.value) || 0;
-        val = Math.round(val * 10000) / 10000;
-        rangeMin = val;
-        e.target.value = rangeMin.toFixed(4);
-        if (currentTopView === "Liquidity") renderLiquidityChart();
+        
+        // Enforce constraint: call min cannot go below mark price
+        val = Math.max(val, spotPriceGlobal);
+        
+        // Make sure callMin doesn't exceed callMax
+        const callMax = parseFloat(document.getElementById("callMaxInput").value) || (spotPriceGlobal * 1.05);
+        val = Math.min(val, callMax - 0.0001);
+        
+        e.target.value = val.toFixed(4);
+        updateTopPanelView();
       });
       
-      document.getElementById("maxStrikeInput").addEventListener("change", (e) => {
+      document.getElementById("callMaxInput").addEventListener("change", (e) => {
         let val = parseFloat(e.target.value) || 0;
-        val = Math.round(val * 10000) / 10000;
-        rangeMax = val;
-        e.target.value = rangeMax.toFixed(4);
-        if (currentTopView === "Liquidity") renderLiquidityChart();
+        
+        // Make sure callMax isn't less than callMin
+        const callMin = parseFloat(document.getElementById("callMinInput").value) || spotPriceGlobal;
+        val = Math.max(val, callMin + 0.0001);
+        
+        e.target.value = val.toFixed(4);
+        updateTopPanelView();
       });
       
-      const modeToggle = document.getElementById("modeToggle");
-      modeToggle.addEventListener("click", () => {
-        document.documentElement.classList.toggle("dark");
-        modeToggle.classList.toggle("rotate-180");
+      document.getElementById("putMaxInput").addEventListener("change", (e) => {
+        let val = parseFloat(e.target.value) || 0;
+        
+        // Enforce constraint: put max cannot go above mark price
+        val = Math.min(val, spotPriceGlobal);
+        
+        // Make sure putMax isn't less than putMin
+        const putMin = parseFloat(document.getElementById("putMinInput").value) || (spotPriceGlobal * 0.95);
+        val = Math.max(val, putMin + 0.0001);
+        
+        e.target.value = val.toFixed(4);
+        updateTopPanelView();
       });
+      
+      document.getElementById("putMinInput").addEventListener("change", (e) => {
+        let val = parseFloat(e.target.value) || 0;
+        
+        // Make sure putMin doesn't exceed putMax
+        const putMax = parseFloat(document.getElementById("putMaxInput").value) || spotPriceGlobal;
+        val = Math.min(val, putMax - 0.0001);
+        
+        e.target.value = val.toFixed(4);
+        updateTopPanelView();
+      });
+      
+      document.getElementById("tradeAmountCall").addEventListener("input", (e) => {
+        // We'll update display via updateChartColors for consistency
+        updateChartColors();
+      });
+      document.getElementById("tradeAmountPut").addEventListener("input", (e) => {
+        // We'll update display via updateChartColors for consistency
+        updateChartColors();
+      });
+      
+      /******************************************************
+       * DARK/LIGHT MODE TOGGLE (Defensive fix)
+       ******************************************************/
       
       setInterval(() => {
         const secsAgo = Math.floor((Date.now() - lastUpdateTime) / 1000);
-        document.getElementById("lastUpdated").innerText = "Last Updated: " + secsAgo + " secs ago";
+        document.getElementById('lastUpdated').innerText = 'Last Updated: ' + secsAgo + ' secs ago';
       }, 1000);
       
       /******************************************************
        * INITIALIZATION
        ******************************************************/
       async function init() {
-        document.getElementById("tradeAmount").value = 1;
+        document.getElementById("tradeAmountCall").value = 0;
+        document.getElementById("callLiquidityDisplay").innerText = "0% ($0)";
+        document.getElementById("tradeAmountPut").value = 0;
+        document.getElementById("putLiquidityDisplay").innerText = "0% ($0)";
         document.getElementById("tradeAmountPerp").value = 1;
         zoomPreset = null;
-        await loadTradePage();
-        document.getElementById("minStrikeInput").value = (spotPriceGlobal * 0.95).toFixed(4);
-        document.getElementById("maxStrikeInput").value = (spotPriceGlobal * 1.05).toFixed(4);
-        rangeMin = spotPriceGlobal * 0.95;
-        rangeMax = spotPriceGlobal * 1.05;
-        // Default zoom preset to 50%
-        setZoomPreset("50");
+        
+        // Set initial active state for option type toggle
+        updateOptionTypeToggle();
+        
+        // Add event listeners for zoom preset buttons
+        document.querySelectorAll('.zoom-preset-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const preset = btn.getAttribute('data-preset');
+            setZoomPreset(preset);
+          });
+        });
+        
+        // We'll let the market initialization handle loading the page
+        document.getElementById("optionDynamicControls").style.display = "block";
       }
-      init();
+
+      // Call the function to fetch and add markets to the selector when the page loads
+      document.addEventListener('DOMContentLoaded', async () => {
+        console.log("DOM loaded, initializing markets...");
+        
+        // Initialize the UI
+        init();
+        
+        // Set default option type to "call"
+        document.getElementById("optionType").value = "call";
+        updateOptionTypeToggle();
+        
+        // Fetch and add markets to selector
+        await fetchAndAddMarketsToSelector();
+        
+        // Add event listener for market selection
+        const marketSelect = document.getElementById('marketSelect');
+        if (marketSelect) {
+          console.log("Adding event listener to market select");
+          marketSelect.addEventListener('change', (event) => {
+            console.log("Market changed:", event.target.value);
+            const selectedMarketAddress = event.target.value;
+            fetchMarketData(selectedMarketAddress);
+          });
+        } else {
+          console.error("Market select element not found for event listener!");
+        }
+      });
+      
+      /******************************************************
+       * LOAD TRADE PAGE (Options)
+       * resetSelectors: true resets defaults; false leaves inputs intact.
+       ******************************************************/
+      async function loadTradePage(resetSelectors = true) {
+        try {
+        lastUpdateTime = Date.now();
+        const marketChoice = document.getElementById("marketSelect").value;
+        const ttlSeconds = parseInt(document.getElementById("expirySelect").value);
+        const optionType = document.getElementById("optionType").value;
+        const userAddress = "0xf8859BAae87Eac4C7EE0b81499eDDD99c778FBEB";
+          
+          // Check if this is a new market (value is the address) or old market (value is a key in marketConfig)
+          const isNewMarket = marketChoice.startsWith('0x') && marketChoice.length >= 40;
+          
+          let optionMarket = "";
+          if (isNewMarket) {
+            optionMarket = marketChoice; // For new markets, the value is already the address
+            console.log("Loading new market with address:", optionMarket);
+          } else {
+            optionMarket = marketConfig[marketChoice] 
+          ? marketConfig[marketChoice].optionMarket
+          : marketConfig["S"].optionMarket;
+            console.log("Loading old market with address:", optionMarket);
+          }
+          
+          // Fetch spot price
+          if (isNewMarket && marketsData) {
+            const selectedMarket = marketsData.find(m => m.address === marketChoice);
+            if (selectedMarket) {
+              // For new markets, we need to fetch the price using the correct API
+              const markPriceResponse = await fetch(`https://api.stryke.xyz/uniswap-prices/mark-price?chainId=${selectedMarket.chainId}&ticker=${selectedMarket.ticker}`);
+              const markPriceData = await markPriceResponse.json();
+              spotPriceGlobal = markPriceData.markPrice;
+            } else {
+        spotPriceGlobal = await fetchSpotPrice(marketChoice);
+            }
+          } else {
+            spotPriceGlobal = await fetchSpotPrice(marketChoice);
+          }
+        
+          // Update market info panel
+          await updateMarketInfoPanel(marketChoice);
+          
+          // Reset selectors if needed
+        if (resetSelectors) {
+            if (optionType === "call" || optionType === "strangle") {
+            document.getElementById("callMinInput").value = spotPriceGlobal.toFixed(4);
+            document.getElementById("callMaxInput").value = (spotPriceGlobal * 1.05).toFixed(4);
+            }
+            if (optionType === "put" || optionType === "strangle") {
+            document.getElementById("putMaxInput").value = spotPriceGlobal.toFixed(4);
+            document.getElementById("putMinInput").value = (spotPriceGlobal * 0.95).toFixed(4);
+          }
+        }
+          
+          // Make sure we have window.liquidityLog available
+          if (!window.liquidityLog || window.liquidityLog.length === 0) {
+            window.liquidityLog = await fetchLiquidityData(marketChoice);
+          }
+          
+          // Skip liquidity calculations if window.liquidityLog is undefined or empty
+          if (!window.liquidityLog || window.liquidityLog.length === 0) {
+            console.log("No liquidity data available, skipping liquidity calculations");
+            return;
+          }
+        
+        let availableLiquidity = 0;
+        if (optionType === "call") {
+          availableLiquidity = window.liquidityLog.filter(tick =>
+            tick.strike >= Math.max(parseFloat(document.getElementById("callMinInput").value), spotPriceGlobal) &&
+            (tick.tokenSymbol.toLowerCase().includes("ws") || tick.tokenSymbol.toLowerCase().includes("weth"))
+          ).reduce((sum, tick) => sum + tick.availableLiquidity, 0);
+        } else if (optionType === "put") {
+          availableLiquidity = window.liquidityLog.filter(tick =>
+            tick.strike <= Math.min(parseFloat(document.getElementById("putMaxInput").value), spotPriceGlobal) &&
+            tick.tokenSymbol.toLowerCase().includes("usdc")
+          ).reduce((sum, tick) => sum + tick.availableLiquidity, 0);
+          } else if (optionType === "strangle") {
+          let callLiquidity = window.liquidityLog.filter(tick =>
+            tick.strike >= Math.max(parseFloat(document.getElementById("callMinInput").value), spotPriceGlobal) &&
+            (tick.tokenSymbol.toLowerCase().includes("ws") || tick.tokenSymbol.toLowerCase().includes("weth"))
+          ).reduce((sum, tick) => sum + tick.availableLiquidity, 0);
+          let putLiquidity = window.liquidityLog.filter(tick =>
+            tick.strike <= Math.min(parseFloat(document.getElementById("putMaxInput").value), spotPriceGlobal) &&
+            tick.tokenSymbol.toLowerCase().includes("usdc")
+          ).reduce((sum, tick) => sum + tick.availableLiquidity, 0);
+          availableLiquidity = Math.min(callLiquidity, putLiquidity);
+        }
+        
+        let tradeAmount = 0;
+        if (optionType === "call") {
+          let sliderVal = parseInt(document.getElementById("tradeAmountCall").value);
+          tradeAmount = availableLiquidity * (sliderVal / 100);
+        } else if (optionType === "put") {
+          let sliderVal = parseInt(document.getElementById("tradeAmountPut").value);
+          tradeAmount = availableLiquidity * (sliderVal / 100);
+          } else if (optionType === "strangle") {
+          let callSliderVal = parseInt(document.getElementById("tradeAmountCall").value);
+          let putSliderVal = parseInt(document.getElementById("tradeAmountPut").value);
+          tradeAmount = availableLiquidity * Math.min(callSliderVal, putSliderVal) / 100;
+        }
+        
+        const liquidityUrl = `https://api.stryke.xyz/clamm/strikes-chain?chainId=146&optionMarket=${optionMarket}&callsReach=800&putsReach=800&filterDeprecated=true`;
+        try {
+          const liquidityResponse = await fetch(liquidityUrl);
+          const liquidityData = await liquidityResponse.json();
+          let allTicks = [];
+          liquidityData.forEach(item => {
+            for (let key in item) {
+              const data = item[key][0];
+              const decimals = data.token.decimals;
+              const scaledAvail = parseFloat(data.meta.availableTokenLiquidity) / Math.pow(10, decimals);
+              const scaledTotal = parseFloat(data.meta.totalTokenLiquidity) / Math.pow(10, decimals);
+              allTicks.push({
+                strike: parseFloat(key),
+                availableLiquidity: scaledAvail,
+                totalLiquidity: scaledTotal,
+                tokenSymbol: data.token.symbol,
+                hook: data.meta.hook
+              });
+            }
+          });
+          window.liquidityLog = allTicks;
+          
+          let allowedHooks = ttlSeconds < 604800
+            ? [intradayHook.toLowerCase(), weeklyHook.toLowerCase()]
+            : [weeklyHook.toLowerCase()];
+          let filteredTicksCall = [];
+          let filteredTicksPut = [];
+            if (optionType === "call" || optionType === "strangle") {
+            filteredTicksCall = window.liquidityLog.filter(tick =>
+              tick.strike >= Math.max(parseFloat(document.getElementById("callMinInput").value), spotPriceGlobal) &&
+              (tick.tokenSymbol.toLowerCase().includes("ws") || tick.tokenSymbol.toLowerCase().includes("weth")) &&
+              allowedHooks.includes(tick.hook.toLowerCase())
+            ).sort((a, b) => a.strike - b.strike);
+          }
+            if (optionType === "put" || optionType === "strangle") {
+            filteredTicksPut = window.liquidityLog.filter(tick =>
+              tick.strike <= Math.min(parseFloat(document.getElementById("putMaxInput").value), spotPriceGlobal) &&
+              tick.tokenSymbol.toLowerCase().includes("usdc") &&
+              allowedHooks.includes(tick.hook.toLowerCase())
+            ).sort((a, b) => b.strike - a.strike);
+          }
+          
+          let chosenCall = [];
+          let chosenPut = [];
+            if (optionType === "strangle") {
+            let cumulativeCall = 0;
+            for (let i = 0; i < filteredTicksCall.length; i++) {
+              if (cumulativeCall >= tradeAmount) break;
+              let tick = { ...filteredTicksCall[i] };
+              let needed = tradeAmount - cumulativeCall;
+              if (tick.availableLiquidity >= needed) {
+                tick.usedLiquidity = needed;
+                cumulativeCall += needed;
+              } else {
+                tick.usedLiquidity = tick.availableLiquidity;
+                cumulativeCall += tick.availableLiquidity;
+              }
+              chosenCall.push(tick);
+            }
+            let cumulativePut = 0;
+            for (let i = 0; i < filteredTicksPut.length; i++) {
+              if (cumulativePut >= tradeAmount) break;
+              let tick = { ...filteredTicksPut[i] };
+              let needed = tradeAmount - cumulativePut;
+              if (tick.availableLiquidity >= needed) {
+                tick.usedLiquidity = needed;
+                cumulativePut += needed;
+              } else {
+                tick.usedLiquidity = tick.availableLiquidity;
+                cumulativePut += tick.availableLiquidity;
+              }
+              chosenPut.push(tick);
+            }
+            tradeData.chosenTicksCalls = chosenCall;
+            tradeData.chosenTicksPuts = chosenPut;
+            tradeData.callExposureStrike = chosenCall.length > 0 ? chosenCall[chosenCall.length - 1].strike : null;
+            tradeData.putExposureStrike = chosenPut.length > 0 ? chosenPut[chosenPut.length - 1].strike : null;
+          } else if (optionType === "call") {
+            let cumulativeCall = 0;
+            for (let i = 0; i < filteredTicksCall.length; i++) {
+              if (cumulativeCall >= tradeAmount) break;
+              let tick = { ...filteredTicksCall[i] };
+              let needed = tradeAmount - cumulativeCall;
+              if (tick.availableLiquidity >= needed) {
+                tick.usedLiquidity = needed;
+                cumulativeCall += needed;
+              } else {
+                tick.usedLiquidity = tick.availableLiquidity;
+                cumulativeCall += tick.availableLiquidity;
+              }
+              chosenCall.push(tick);
+            }
+            tradeData.chosenTicks = chosenCall;
+            tradeData.exposureStrike = chosenCall[chosenCall.length - 1].strike;
+          } else if (optionType === "put") {
+            let cumulativePut = 0;
+            for (let i = 0; i < filteredTicksPut.length; i++) {
+              if (cumulativePut >= tradeAmount) break;
+              let tick = { ...filteredTicksPut[i] };
+              let needed = tradeAmount - cumulativePut;
+              if (tick.availableLiquidity >= needed) {
+                tick.usedLiquidity = needed;
+                cumulativePut += needed;
+              } else {
+                tick.usedLiquidity = tick.availableLiquidity;
+                cumulativePut += tick.availableLiquidity;
+              }
+              chosenPut.push(tick);
+            }
+            tradeData.chosenTicks = chosenPut;
+            tradeData.exposureStrike = chosenPut[chosenPut.length - 1].strike;
+          }
+          
+          // Fetch premiums:
+          const premiumPromises = [];
+            if (optionType === "strangle") {
+            chosenCall.forEach(tick => {
+              const tickQuoteUrl = `https://api.stryke.xyz/clamm/purchase/quote?chainId=146&optionMarket=${optionMarket}&user=${userAddress}&strike=${tick.strike}&markPrice=${spotPriceGlobal}&type=call&amount=${tick.usedLiquidity}&ttl=${ttlSeconds}`;
+              premiumPromises.push(
+                fetch(tickQuoteUrl)
+                  .then(res => res.json())
+                  .then(data => {
+                    const decimals = data.token.decimals;
+                    return (parseFloat(data.premium) + parseFloat(data.fees || 0)) / Math.pow(10, decimals);
+                  })
+                  .catch(err => {
+                    console.error("Error fetching premium for tick", tick.strike, err);
+                    return 0;
+                  })
+              );
+            });
+            chosenPut.forEach(tick => {
+              const tickQuoteUrl = `https://api.stryke.xyz/clamm/purchase/quote?chainId=146&optionMarket=${optionMarket}&user=${userAddress}&strike=${tick.strike}&markPrice=${spotPriceGlobal}&type=put&amount=${tick.usedLiquidity}&ttl=${ttlSeconds}`;
+              premiumPromises.push(
+                fetch(tickQuoteUrl)
+                  .then(res => res.json())
+                  .then(data => {
+                    const decimals = data.token.decimals;
+                    return (parseFloat(data.premium) + parseFloat(data.fees || 0)) / Math.pow(10, decimals);
+                  })
+                  .catch(err => {
+                    console.error("Error fetching premium for tick", tick.strike, err);
+                    return 0;
+                  })
+              );
+            });
+          } else {
+            tradeData.chosenTicks.forEach(tick => {
+              const qType = optionType;
+              const tickQuoteUrl = `https://api.stryke.xyz/clamm/purchase/quote?chainId=146&optionMarket=${optionMarket}&user=${userAddress}&strike=${tick.strike}&markPrice=${spotPriceGlobal}&type=${qType}&amount=${tick.usedLiquidity}&ttl=${ttlSeconds}`;
+              premiumPromises.push(
+                fetch(tickQuoteUrl)
+                  .then(res => res.json())
+                  .then(data => {
+                    const decimals = data.token.decimals;
+                    return (parseFloat(data.premium) + parseFloat(data.fees || 0)) / Math.pow(10, decimals);
+                  })
+                  .catch(err => {
+                    console.error("Error fetching premium for tick", tick.strike, err);
+                    return 0;
+                  })
+              );
+            });
+          }
+          const chosenPremiums = await Promise.all(premiumPromises);
+            if (optionType === "strangle") {
+            let idx = 0;
+            chosenCall.forEach(tick => {
+              tick.premiumCost = chosenPremiums[idx++];
+            });
+            chosenPut.forEach(tick => {
+              tick.premiumCost = chosenPremiums[idx++];
+            });
+          } else {
+            tradeData.chosenTicks.forEach((tick, idx) => {
+              tick.premiumCost = chosenPremiums[idx];
+            });
+          }
+          
+          // Compute cumulative payoff curve:
+          let prices = [];
+          let payoffCurve = [];
+            if (optionType === "strangle") {
+            let callStrikes = chosenCall.length > 0 ? chosenCall.map(t => t.strike) : [spotPriceGlobal];
+            let putStrikes = chosenPut.length > 0 ? chosenPut.map(t => t.strike) : [spotPriceGlobal];
+            let lowTick = Math.min(...callStrikes, ...putStrikes);
+            let highTick = Math.max(...callStrikes, ...putStrikes);
+            const steps = 50;
+            const stepSize = (highTick * 1.05 - lowTick * 0.95) / steps;
+            for (let p = lowTick * 0.95; p <= highTick * 1.05; p += stepSize) {
+              prices.push(p);
+              let callPayoff = 0;
+              let putPayoff = 0;
+              chosenCall.forEach(t => {
+                callPayoff += Math.max(p - t.strike, 0) * t.usedLiquidity;
+              });
+              chosenPut.forEach(t => {
+                putPayoff += Math.max(t.strike - p, 0) * t.usedLiquidity;
+              });
+              payoffCurve.push(callPayoff + putPayoff);
+            }
+          } else if (optionType === "call") {
+            let lowTick = Math.min(...chosenCall.map(t => t.strike));
+            let highTick = Math.max(...chosenCall.map(t => t.strike));
+            const steps = 50;
+            const stepSize = (highTick * 1.05 - lowTick * 0.95) / steps;
+            for (let p = lowTick * 0.95; p <= highTick * 1.05; p += stepSize) {
+              prices.push(p);
+              let cumPayoff = 0;
+              chosenCall.forEach(t => {
+                cumPayoff += Math.max(p - t.strike, 0) * t.usedLiquidity;
+              });
+              payoffCurve.push(cumPayoff);
+            }
+          } else if (optionType === "put") {
+            let lowTick = Math.min(...chosenPut.map(t => t.strike));
+            let highTick = Math.max(...chosenPut.map(t => t.strike));
+            const steps = 50;
+            const stepSize = (highTick * 1.05 - lowTick * 0.95) / steps;
+            for (let p = lowTick * 0.95; p <= highTick * 1.05; p += stepSize) {
+              prices.push(p);
+              let cumPayoff = 0;
+              chosenPut.forEach(t => {
+                cumPayoff += Math.max(t.strike - p, 0) * t.usedLiquidity;
+              });
+              payoffCurve.push(cumPayoff);
+            }
+          }
+          tradeData = {
+            ...tradeData,
+            underlyingPrices: prices,
+            payoffCurve: payoffCurve,
+              totalPremium: (optionType === "strangle"
+              ? chosenCall.concat(chosenPut)
+              : tradeData.chosenTicks
+            ).reduce((sum, tick) => sum + tick.premiumCost, 0),
+            optionType: optionType
+          };
+          updateTopPanelView();
+        } catch (error) {
+          console.error("Error fetching or processing data:", error);
+          }
+        } catch (error) {
+          console.error("Error in loadTradePage:", error);
+        }
+      }
+      
+      /******************************************************
+       * LOAD PERP TRADE PAGE
+       ******************************************************/
+      async function loadPerpTradePage() {
+        lastUpdateTime = Date.now();
+        const marketChoice = document.getElementById("marketSelectPerp").value;
+        const tradeAmount = parseFloat(document.getElementById("tradeAmountPerp").value);
+        const positionType = document.getElementById("toggleLong").classList.contains("active") ? "long" : "short";
+        const userAddress = "0xf8859BAae87Eac4C7EE0b81499eDDD99c778FBEB";
+        const optionMarket = marketConfig[marketChoice]
+          ? marketConfig[marketChoice].optionMarket
+          : marketConfig["S"].optionMarket;
+        spotPriceGlobal = await fetchSpotPrice(marketChoice);
+      
+        const liquidityData = await fetchLiquidityData(marketChoice);
+        let filteredTicks = [];
+        if (positionType === "long") {
+          filteredTicks = liquidityData.filter(t => t.strike >= spotPriceGlobal);
+          filteredTicks.sort((a, b) => a.strike - b.strike);
+        } else {
+          filteredTicks = liquidityData.filter(t => t.strike <= spotPriceGlobal);
+          filteredTicks.sort((a, b) => b.strike - a.strike);
+        }
+      
+        let cumulative = 0;
+        let chosenTicks = [];
+        for (let i = 0; i < filteredTicks.length && cumulative < tradeAmount; i++) {
+          let tick = { ...filteredTicks[i] };
+          let needed = tradeAmount - cumulative;
+          if (tick.availableLiquidity >= needed) {
+            tick.usedLiquidity = needed;
+            cumulative += needed;
+          } else {
+            tick.usedLiquidity = tick.availableLiquidity;
+            cumulative += tick.availableLiquidity;
+          }
+          chosenTicks.push(tick);
+        }
+      
+        const ttlSeconds = 86400;
+        const premiumPromises = chosenTicks.map(tick => {
+          const qType = positionType === "long" ? "call" : "put";
+          const tickQuoteUrl = `https://api.stryke.xyz/clamm/purchase/quote?chainId=146&optionMarket=${optionMarket}&user=${userAddress}&strike=${tick.strike}&markPrice=${spotPriceGlobal}&type=${qType}&amount=${tick.usedLiquidity}&ttl=${ttlSeconds}`;
+          return fetch(tickQuoteUrl)
+            .then(res => res.json())
+            .then(data => {
+              const decimals = data.token.decimals;
+              return (parseFloat(data.premium) + parseFloat(data.fees || 0)) / Math.pow(10, decimals);
+            })
+            .catch(err => {
+              console.error("Error fetching premium for tick", tick.strike, err);
+              return 0;
+            });
+        });
+        const chosenPremiums = await Promise.all(premiumPromises);
+        chosenTicks.forEach((tick, idx) => {
+          tick.premiumCost = chosenPremiums[idx];
+        });
+      
+        let prices = [];
+        let payoffCurve = [];
+        let lowTick = Math.min(...chosenTicks.map(t => t.strike));
+        let highTick = Math.max(...chosenTicks.map(t => t.strike));
+        let chartMin, chartMax;
+        if (positionType === "long") {
+          chartMin = spotPriceGlobal * 0.95;
+          chartMax = highTick * 1.05;
+        } else {
+          chartMin = lowTick * 0.95;
+          chartMax = spotPriceGlobal * 1.05;
+        }
+        const steps = 50;
+        const stepSize = (chartMax - chartMin) / steps;
+        for (let p = chartMin; p <= chartMax; p += stepSize) {
+          prices.push(p);
+          let cumulativePayoff = 0;
+          if (positionType === "long") {
+            chosenTicks.forEach(t => {
+              cumulativePayoff += Math.max(p - t.strike, 0) * t.usedLiquidity;
+            });
+          } else {
+            chosenTicks.forEach(t => {
+              cumulativePayoff += Math.max(t.strike - p, 0) * t.usedLiquidity;
+            });
+          }
+          payoffCurve.push(cumulativePayoff);
+        }
+      
+        tradeData = {
+          chosenTicks: chosenTicks,
+          underlyingPrices: prices,
+          payoffCurve: payoffCurve,
+          totalPremium: chosenTicks.reduce((sum, tick) => sum + tick.premiumCost, 0),
+          positionType: positionType,
+          productType: "perp"
+        };
+        updateTopPanelView();
+      }
+      
+      /******************************************************
+       * FETCH FUNCTIONS
+       ******************************************************/
+      async function fetchSpotPrice(market) {
+        const config = marketConfig[market] || marketConfig["S"];
+        const url = config.spotApi;
+        try {
+          const resp = await fetch(url);
+          const data = await resp.json();
+          console.log("Fetched markPrice:", data.markPrice);
+          return parseFloat(data.markPrice);
+        } catch (err) {
+          console.error("Error fetching spot price:", err);
+          return 0;
+        }
+      }
+      
+      async function fetchLiquidityData(market) {
+        try {
+          console.log("Fetching liquidity data for market:", market);
+          
+          // Find if this is one of the new markets
+          if (marketsData && marketsData.length > 0) {
+            const newMarket = marketsData.find(m => m.address === market);
+            
+            if (newMarket) {
+              console.log(`Using new market API for ${newMarket.pairName}`);
+              const liquidityUrl = `https://api.stryke.xyz/clamm/strikes-chain?chainId=${newMarket.chainId}&optionMarket=${newMarket.address}&callsReach=1000&putsReach=1000&filterDeprecated=true`;
+              
+              try {
+                const resp = await fetch(liquidityUrl);
+                const data = await resp.json();
+                console.log("Liquidity data from API:", data);
+                
+                // Check if data is an array and has content
+                if (!Array.isArray(data) || data.length === 0) {
+                  console.warn("API returned empty or invalid data for the new market");
+                  window.liquidityLog = [];
+                  return [];
+                }
+                
+                let ticks = [];
+                data.forEach(item => {
+                  for (let key in item) {
+                    try {
+                      const d = item[key][0];
+                      if (!d || !d.token || !d.meta) {
+                        console.warn("Invalid data entry:", item);
+                        continue;
+                      }
+                      
+                      const decimals = d.token.decimals;
+                      const avail = parseFloat(d.meta.availableTokenLiquidity) / Math.pow(10, decimals);
+                      const tot = parseFloat(d.meta.totalTokenLiquidity) / Math.pow(10, decimals);
+                      ticks.push({ 
+                        strike: parseFloat(key),
+                        availableLiquidity: avail,
+                        totalLiquidity: tot,
+                        tokenSymbol: d.token.symbol
+                      });
+                    } catch (itemError) {
+                      console.warn("Error processing item:", itemError);
+                    }
+                  }
+                });
+                
+                ticks.sort((a, b) => a.strike - b.strike);
+                if (ticks.length > 0) {
+                  globalMinTick = ticks[0].strike;
+                  globalMaxTick = ticks[ticks.length - 1].strike;
+                } else {
+                  console.warn("No ticks were processed from the API data");
+                }
+                
+                // Store ticks for later use
+                window.liquidityLog = ticks;
+                
+                return ticks;
+              } catch (apiError) {
+                console.error("Error fetching from new market API:", apiError);
+                window.liquidityLog = [];
+                return [];
+              }
+            }
+          }
+          
+          // If it's not a new market or failed to fetch, use the existing configuration
+          try {
+        const config = marketConfig[market] || marketConfig["S"];
+        const liquidityUrl = `https://api.stryke.xyz/clamm/strikes-chain?chainId=146&optionMarket=${config.optionMarket}&callsReach=800&putsReach=800&filterDeprecated=true`;
+        const resp = await fetch(liquidityUrl);
+        const data = await resp.json();
+            
+            if (!Array.isArray(data) || data.length === 0) {
+              console.warn("API returned empty or invalid data for the old market");
+              window.liquidityLog = [];
+              return [];
+            }
+            
+        let ticks = [];
+        data.forEach(item => {
+          for (let key in item) {
+                try {
+            const d = item[key][0];
+                  if (!d || !d.token || !d.meta) {
+                    console.warn("Invalid data entry in old API:", item);
+                    continue;
+                  }
+                  
+            const decimals = d.token.decimals;
+            const avail = parseFloat(d.meta.availableTokenLiquidity) / Math.pow(10, decimals);
+            const tot = parseFloat(d.meta.totalTokenLiquidity) / Math.pow(10, decimals);
+            ticks.push({ 
+              strike: parseFloat(key),
+              availableLiquidity: avail,
+              totalLiquidity: tot,
+              tokenSymbol: d.token.symbol
+            });
+                } catch (itemError) {
+                  console.warn("Error processing old API item:", itemError);
+                }
+          }
+        });
+            
+        ticks.sort((a, b) => a.strike - b.strike);
+        if (ticks.length > 0) {
+          globalMinTick = ticks[0].strike;
+          globalMaxTick = ticks[ticks.length - 1].strike;
+        }
+            
+            // Store ticks for later use
+            window.liquidityLog = ticks;
+            
+        return ticks;
+          } catch (oldApiError) {
+            console.error("Error fetching from old market API:", oldApiError);
+            window.liquidityLog = [];
+            return [];
+          }
+        } catch (error) {
+          console.error("Error in fetchLiquidityData:", error);
+          window.liquidityLog = [];
+          return [];
+        }
+      }
+      
+      /******************************************************
+       * UPDATE TOP PANEL VIEW
+       * (For Options, the main view always shows the liquidity chart)
+       ******************************************************/
+      function updateTopPanelView() {
+        const container = document.getElementById("topChartContainer");
+        container.innerHTML = "";
+        if (currentProductType === "options") {
+          renderLiquidityChart();
+        } else if (currentProductType === "perp") {
+          renderPerpDepthChart();
+        }
+      }
+      
+      /******************************************************
+       * DARK/LIGHT MODE TOGGLE
+       ******************************************************/
+      const modeToggle = document.getElementById('modeToggle');
+      if (modeToggle) {
+        modeToggle.addEventListener('click', () => {
+          document.documentElement.classList.toggle('dark');
+          modeToggle.classList.toggle('rotate-180');
+        });
+      }
+      
+      setInterval(() => {
+        const secsAgo = Math.floor((Date.now() - lastUpdateTime) / 1000);
+        document.getElementById("lastUpdated").innerText = "Last Updated: " + secsAgo + " secs ago";
+      }, 1000);
+      
+      // Add event listeners for manual input changes to the selector values
+      document.getElementById("callMinInput").addEventListener("change", () => {
+        updateChartColors();
+        if (totalLiquidityChartInstance) {
+          totalLiquidityChartInstance.update();
+        }
+      });
+      
+      document.getElementById("callMaxInput").addEventListener("change", () => {
+        updateChartColors();
+        if (totalLiquidityChartInstance) {
+          totalLiquidityChartInstance.update();
+        }
+      });
+      
+      document.getElementById("putMinInput").addEventListener("change", () => {
+        updateChartColors();
+        if (totalLiquidityChartInstance) {
+          totalLiquidityChartInstance.update();
+        }
+      });
+      
+      document.getElementById("putMaxInput").addEventListener("change", () => {
+        updateChartColors();
+        if (totalLiquidityChartInstance) {
+          totalLiquidityChartInstance.update();
+        }
+      });
+      
+      // Option type toggle event handlers
+      document.querySelectorAll("[id^='optionType']").forEach(button => {
+        button.addEventListener("click", function() {
+          // Remove active class from all buttons
+          document.querySelectorAll("[id^='optionType']").forEach(btn => {
+            btn.classList.remove("active", "bg-[#0FFF95]", "text-black");
+            btn.classList.add("bg-[#2A2A2A]", "text-white");
+          });
+          
+          // Add active class to clicked button
+          this.classList.add("active", "bg-[#0FFF95]", "text-black");
+          this.classList.remove("bg-[#2A2A2A]", "text-white");
+          
+          // Set the hidden select value
+          const optionType = this.getAttribute("data-option-type");
+          document.getElementById("optionType").value = optionType;
+          
+          // Trigger the change event on the select
+          const event = new Event("change");
+          document.getElementById("optionType").dispatchEvent(event);
+        });
+      });
+      
+      // Set initial active state for the option type toggle based on select value
+      function updateOptionTypeToggle() {
+        const selectedValue = document.getElementById("optionType").value;
+        
+        // Store original colors when page first loads (only once)
+        if (!window.originalSvgColors) {
+          window.originalSvgColors = {};
+          document.querySelectorAll("[id^='optionType']").forEach(button => {
+            const buttonId = button.id;
+            window.originalSvgColors[buttonId] = [];
+            button.querySelectorAll('svg path').forEach((path, index) => {
+              window.originalSvgColors[buttonId][index] = path.getAttribute('stroke');
+            });
+          });
+        }
+        
+        document.querySelectorAll("[id^='optionType']").forEach(button => {
+          if (button.getAttribute("data-option-type") === selectedValue) {
+            // Add active classes
+            button.classList.add("active", "bg-[#0FFF95]", "text-black");
+            button.classList.remove("bg-[#2A2A2A]", "text-white");
+            
+            // Change all SVG paths to black when active
+            button.querySelectorAll('svg path').forEach(path => {
+              path.setAttribute('stroke', '#000000');
+            });
+          } else {
+            // Remove active classes
+            button.classList.remove("active", "bg-[#0FFF95]", "text-black");
+            button.classList.add("bg-[#2A2A2A]", "text-white");
+            
+            // Restore original SVG path colors for this button
+            const buttonId = button.id;
+            button.querySelectorAll('svg path').forEach((path, index) => {
+              if (window.originalSvgColors && window.originalSvgColors[buttonId]) {
+                path.setAttribute('stroke', window.originalSvgColors[buttonId][index]);
+              }
+            });
+          }
+        });
+      }
+      
+      // Call on page load
+      updateOptionTypeToggle();
+      
+      // Add event listeners for option type toggle buttons
+      document.querySelectorAll('[data-option-type]').forEach(button => {
+        button.addEventListener('click', function() {
+          const optionType = this.getAttribute('data-option-type');
+          document.getElementById("optionType").value = optionType;
+          
+          // Trigger the change event on the select to update the UI
+          const event = new Event('change');
+          document.getElementById("optionType").dispatchEvent(event);
+        });
+      });
+      
+      // Function to update market info panel
+      async function updateMarketInfoPanel(market) {
+        try {
+          // Check if this is a new market (an address) or old market (a key in marketConfig)
+          const isNewMarket = market.startsWith('0x') && market.length >= 40;
+          
+          // Get references to the correct DOM elements
+          const marketInfoPrice = document.getElementById('marketInfoPrice');
+          const marketInfoLiquidity = document.getElementById('marketInfoLiquidity');
+          const marketInfoOpenInterest = document.getElementById('marketInfoOpenInterest');
+          const marketInfoVolume = document.getElementById('marketInfoVolume');
+          
+          // Check if elements exist
+          if (!marketInfoLiquidity || !marketInfoOpenInterest || !marketInfoVolume) {
+            console.warn("Some market info elements not found:", {
+              marketInfoLiquidity: !!marketInfoLiquidity,
+              marketInfoOpenInterest: !!marketInfoOpenInterest,
+              marketInfoVolume: !!marketInfoVolume
+            });
+          }
+          
+          if (isNewMarket && marketsData) {
+            const selectedMarket = marketsData.find(m => m.address === market);
+            if (selectedMarket) {
+              console.log("Updating market info panel for new market:", selectedMarket.pairName);
+              
+              // Get the market data directly from the stored data
+              const totalLiquidity = selectedMarket.totalLiquidity || 0;
+              const openInterest = selectedMarket.openInterest || 0;
+              const volume24h = selectedMarket.volume24h || 0;
+              
+              // Update UI elements safely
+              if (marketInfoLiquidity) marketInfoLiquidity.textContent = `$${formatNumber(totalLiquidity)}`;
+              if (marketInfoOpenInterest) marketInfoOpenInterest.textContent = `$${formatNumber(openInterest)}`;
+              if (marketInfoVolume) marketInfoVolume.textContent = `$${formatNumber(volume24h)}`;
+              if (marketInfoPrice) marketInfoPrice.textContent = spotPriceGlobal ? `$${spotPriceGlobal.toFixed(4)}` : '--';
+              
+              return;
+            }
+          }
+          
+          // For old markets, use the existing approach
+          try {
+            // Fetch market data from the comprehensive API
+            const marketDataUrl = `https://api.stryke.xyz/v1.1/clamm/option-markets?chains=42161%2C146%2C8453%2C81457%2C5000%2C80094`;
+            const response = await fetch(marketDataUrl);
+            const data = await response.json();
+            
+            // Get the config for the current market if it's an old market
+            const config = marketConfig[market] || marketConfig["S"];
+            
+            // Find the current market in the API response
+            const marketData = data.find(m => {
+              if (isNewMarket) {
+                return m.address && m.address.toLowerCase() === market.toLowerCase();
+              } else {
+                return (m.address && config && m.address.toLowerCase() === config.optionMarket.toLowerCase()) || 
+                       (m.ticker && config && config.ticker && m.ticker === config.ticker);
+              }
+            });
+            
+            if (marketData) {
+              // Use the API values directly for more accuracy
+              const totalLiquidity = marketData.totalLiquidity || 0;
+              const openInterest = marketData.openInterest || 0;
+              const volume24h = marketData.volume24h || 0;
+              
+              // Update UI elements safely
+              if (marketInfoLiquidity) marketInfoLiquidity.textContent = `$${formatNumber(totalLiquidity)}`;
+              if (marketInfoOpenInterest) marketInfoOpenInterest.textContent = `$${formatNumber(openInterest)}`;
+              if (marketInfoVolume) marketInfoVolume.textContent = `$${formatNumber(volume24h)}`;
+              if (marketInfoPrice) marketInfoPrice.textContent = spotPriceGlobal ? `$${spotPriceGlobal.toFixed(4)}` : '--';
+              
+              console.log("Market data from API:", {
+                totalLiquidity, openInterest, volume24h,
+                market: marketData.pairName || marketData.ticker
+              });
+            } else {
+              console.warn("Market not found in API response for:", market);
+              
+              // Fallback to local calculated values if API doesn't return the market data
+              let totalLiquidity = 0;
+              let openInterest = 0;
+              
+              if (window.processedLiquidityData && window.processedLiquidityData.length > 0) {
+                totalLiquidity = window.processedLiquidityData.reduce((sum, p) => sum + p.avail + p.locked, 0);
+                openInterest = window.processedLiquidityData.reduce((sum, p) => sum + p.locked, 0);
+              }
+              
+              // Update UI elements safely
+              if (marketInfoLiquidity) marketInfoLiquidity.textContent = `$${formatNumber(totalLiquidity)}`;
+              if (marketInfoOpenInterest) marketInfoOpenInterest.textContent = `$${formatNumber(openInterest)}`;
+              if (marketInfoVolume) marketInfoVolume.textContent = `--`;
+            }
+          } catch (error) {
+            console.error("Error fetching market data:", error);
+            
+            // Set fallback values
+            if (marketInfoLiquidity) marketInfoLiquidity.textContent = '--';
+            if (marketInfoOpenInterest) marketInfoOpenInterest.textContent = '--';
+            if (marketInfoVolume) marketInfoVolume.textContent = '--';
+          }
+        } catch (error) {
+          console.error("Error in updateMarketInfoPanel:", error);
+        }
+      }
+      
+      document.getElementById("callMinInput").addEventListener("change", (e) => {
+        let val = parseFloat(e.target.value) || 0;
+        e.target.value = val.toFixed(4);
+        updateTopPanelView();
+      });
+      
+      function getPremium() {
+        const tradeData = getTradeData();
+
+        // Return 0 if any required values are missing
+        if (!tradeData.callMin && !tradeData.putMax || !tradeData.amount) {
+          return 0;
+        }
+
+        let callPremium = 0;
+        let putPremium = 0;
+
+        if (tradeData.optionType === "strangle") {
+          // Calculate both call and put premiums
+          if (tradeData.callMin && tradeData.callMax && parseFloat(tradeData.callAmount) > 0) {
+            callPremium = calculatePremium(
+              "call",
+              parseFloat(tradeData.callMin),
+              parseFloat(tradeData.callMax),
+              parseFloat(tradeData.callAmount) / 100,
+              false
+            );
+          }
+
+          if (tradeData.putMin && tradeData.putMax && parseFloat(tradeData.putAmount) > 0) {
+            putPremium = calculatePremium(
+              "put",
+              parseFloat(tradeData.putMin),
+              parseFloat(tradeData.putMax),
+              parseFloat(tradeData.putAmount) / 100,
+              false
+            );
+          }
+
+          return callPremium + putPremium;
+        }
+      }
+      
+      async function fetchAndProcessAllMarkets() {
+        try {
+          // Fetch all markets
+          const response = await fetch('https://api.stryke.xyz/v1.1/clamm/option-markets?chains=42161%2C146%2C8453%2C81457%2C5000%2C80094');
+          const markets = await response.json();
+
+          for (const market of markets) {
+            if (!market.deprecated) {
+              // Fetch strikes data for each market
+              const strikesResponse = await fetch(`https://api.stryke.xyz/clamm/strikes-chain?chainId=${market.chainId}&optionMarket=${market.address}&callsReach=1000&putsReach=1000&filterDeprecated=true`);
+              const strikesData = await strikesResponse.json();
+
+              // Fetch mark price for each market
+              const markPriceResponse = await fetch(`https://api.stryke.xyz/uniswap-prices/mark-price?chainId=${market.chainId}&ticker=${market.ticker}`);
+              const markPriceData = await markPriceResponse.json();
+
+              // Process each strike
+              for (const strike of strikesData) {
+                const strikePrice = Object.keys(strike)[0];
+
+                // Fetch option quotes for each strike
+                const quoteResponse = await fetch(`https://api.stryke.xyz/clamm/purchase/quote?chainId=${market.chainId}&optionMarket=${market.address}&user=0x012afd4FE6EF8BF24858E2B7Bd309cC9e167ADe9&strike=${strikePrice}&markPrice=${markPriceData.markPrice}&type=call&amount=1&ttl=86400`);
+                const quoteData = await quoteResponse.json();
+
+                // Update UI with the fetched data
+                updateMarketInfo({
+                  liquidity: strike[strikePrice][0].totalLiquidity,
+                  markPrice: markPriceData.markPrice,
+                  quote: quoteData.quote
+                });
+                updateCharts({
+                  liquidityData: strike[strikePrice][0].totalLiquidity
+                });
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching and processing market data:', error);
+        }
+      }
+
+      // Global variables to store market data
+      let marketsData = [];
+      let selectedMarketData = null;
+
+      async function fetchAndAddMarketsToSelector() {
+        try {
+          console.log("Fetching markets from API...");
+          
+          // Fetch all markets
+          const response = await fetch('https://api.stryke.xyz/v1.1/clamm/option-markets?chains=42161%2C146%2C8453%2C81457%2C5000%2C80094');
+          const markets = await response.json();
+          
+          console.log("Markets fetched:", markets.length);
+          marketsData = markets; // Store markets data globally
+          
+          // Define chain information
+          const CHAIN_DATA = {
+            42161: { 
+              name: "Arbitrum", 
+              color: "#2D374B", 
+              logo: "https://www.stryke.xyz/images/tokens/arb.svg"
+            },
+            146: { 
+              name: "Sonic", 
+              color: "#FF0420", 
+              logo: "https://www.stryke.xyz/images/tokens/ws.svg"
+            },
+            80094: { 
+              name: "Berachain", 
+              color: "#FAC807", 
+              logo: "https://www.stryke.xyz/_next/image?url=%2Fimages%2Ftokens%2Fbera.png&w=48&q=75"
+            },
+            5000: { 
+              name: "Mantle", 
+              color: "#0B1811", 
+              logo: "https://www.stryke.xyz/images/tokens/wmnt.svg"
+            },
+            81457: { 
+              name: "Blast", 
+              color: "#FF4500", 
+              logo: "https://www.stryke.xyz/_next/image?url=%2Fimages%2Ftokens%2Fblast.png&w=48&q=75"
+            },
+            8453: { 
+              name: "Base", 
+              color: "#0052FF", 
+              logo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cpath fill='%230052FF' fill-rule='nonzero' d='M14 28a14 14 0 1 0 0-28 14 14 0 0 0 0 28Z'/%3E%3Cpath fill='%23FFF' d='M13.967 23.86c5.445 0 9.86-4.415 9.86-9.86 0-5.445-4.415-9.86-9.86-9.86-5.166 0-9.403 3.974-9.825 9.03h14.63v1.642H4.142c.413 5.065 4.654 9.047 9.826 9.047Z'/%3E%3C/g%3E%3C/svg%3E"
+            }
+          };
+          
+          // Group markets by chain
+          const marketsByChain = {};
+          markets.forEach(market => {
+            if (!market.deprecated) {
+              const chainId = market.chainId.toString();
+              if (!marketsByChain[chainId]) {
+                marketsByChain[chainId] = [];
+              }
+              marketsByChain[chainId].push(market);
+            }
+          });
+          
+          // Sort chains by name
+          const sortedChainIds = Object.keys(marketsByChain).sort((a, b) => {
+            const chainA = CHAIN_DATA[a] || { name: "Unknown" };
+            const chainB = CHAIN_DATA[b] || { name: "Unknown" };
+            return chainA.name.localeCompare(chainB.name);
+          });
+          
+          // Find both standard select and our custom dropdown elements
+          const marketSelect = document.getElementById('marketSelect');
+          const marketDropdownList = document.getElementById('marketDropdownList');
+          const marketDropdownButton = document.getElementById('marketDropdownButton');
+          const selectedMarketText = document.getElementById('selectedMarketText');
+          
+          console.log("Market select elements found:", !!marketSelect, !!marketDropdownList);
+          
+          if (!marketSelect || !marketDropdownList) {
+            console.error("Market select elements not found!");
+            return;
+          }
+          
+          // Clear existing options
+          marketSelect.innerHTML = '';
+          
+          // Get the search box container (we keep it)
+          const searchBoxContainer = marketDropdownList.querySelector('.sticky');
+          
+          // Clear dropdown items but keep the search box
+          marketDropdownList.innerHTML = '';
+          
+          // Re-add the search box container if it existed
+          if (searchBoxContainer) {
+            marketDropdownList.appendChild(searchBoxContainer);
+          }
+          
+          // Format a currency value with appropriate abbreviation
+          const formatCurrency = (value) => {
+            if (value >= 1000000) {
+              return '$' + (value / 1000000).toFixed(2) + 'M';
+            } else if (value >= 1000) {
+              return '$' + (value / 1000).toFixed(2) + 'K';
+            } else {
+              return '$' + value.toFixed(2);
+            }
+          };
+          
+          let firstMarketAddress = null;
+          
+          // Find WETH-USDC on Arbitrum
+          const wethUsdcArbitrum = markets.find(m => 
+            m.chainId === 42161 && 
+            m.pairName && 
+            m.pairName.toLowerCase().includes('weth-usdc')
+          );
+          
+          if (wethUsdcArbitrum) {
+            firstMarketAddress = wethUsdcArbitrum.address;
+            console.log("Found WETH-USDC on Arbitrum:", firstMarketAddress);
+          }
+          
+          // Add markets to both the hidden select and the visible dropdown, grouped by chain
+          sortedChainIds.forEach(chainId => {
+            const chain = CHAIN_DATA[chainId] || { name: `Chain ${chainId}`, color: "#999" };
+            
+            // Add chain header to the dropdown
+            const chainHeader = document.createElement('div');
+            chainHeader.className = 'chain-header p-2 font-bold text-white flex items-center';
+            chainHeader.style.backgroundColor = chain.color;
+            chainHeader.innerHTML = `
+              <img src="${chain.logo}" alt="${chain.name}" class="w-5 h-5 mr-2" />
+              <span>${chain.name}</span>
+            `;
+            marketDropdownList.appendChild(chainHeader);
+            
+            // Sort markets by liquidity within this chain
+            const chainMarkets = marketsByChain[chainId].sort((a, b) => 
+              (b.totalLiquidity || 0) - (a.totalLiquidity || 0)
+            );
+            
+            // Add markets for this chain
+            chainMarkets.forEach(market => {
+              console.log("Adding market to selector:", market.pairName, market.address);
+              
+              // Add to hidden select (for compatibility)
+              const option = document.createElement('option');
+              option.value = market.address; // Use market address as the value
+              option.textContent = market.pairName;
+              option.setAttribute('data-chain-id', chainId);
+              marketSelect.appendChild(option);
+              
+              // Store first market address if not already set
+              if (!firstMarketAddress) {
+                firstMarketAddress = market.address;
+              }
+              
+              // Add to visible dropdown with enhanced data
+              const dropdownItem = document.createElement('div');
+              dropdownItem.className = 'p-3 hover:bg-[#3A3A3A] cursor-pointer flex flex-col';
+              dropdownItem.dataset.value = market.address;
+              dropdownItem.dataset.chainId = chainId;
+              
+              // Format the market data
+              const liquidity = formatCurrency(market.totalLiquidity || 0);
+              const openInterest = formatCurrency(market.openInterest || 0);
+              const volume = formatCurrency(market.volume24h || 0);
+              
+              // Populate the dropdown item with market data
+              dropdownItem.innerHTML = `
+                <div class="flex items-center justify-between">
+                  <span class="font-semibold text-white">${market.pairName}</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2 mt-1">
+                  <div class="flex flex-col">
+                    <span class="text-xs text-gray-400">Liquidity</span>
+                    <span class="text-sm text-green-400">${liquidity}</span>
+                  </div>
+                  <div class="flex flex-col">
+                    <span class="text-xs text-gray-400">Open Interest</span>
+                    <span class="text-sm text-yellow-400">${openInterest}</span>
+                  </div>
+                  <div class="flex flex-col">
+                    <span class="text-xs text-gray-400">24h Volume</span>
+                    <span class="text-sm text-blue-400">${volume}</span>
+                  </div>
+                </div>
+              `;
+              
+              // Add click event to dropdown item
+              dropdownItem.addEventListener('click', () => {
+                // Update the hidden select value
+                marketSelect.value = market.address;
+                
+                // Update the button text
+                selectedMarketText.textContent = market.pairName;
+                
+                // Hide the dropdown
+                marketDropdownList.classList.add('hidden');
+                
+                // Trigger change event on the hidden select
+                const event = new Event('change');
+                marketSelect.dispatchEvent(event);
+              });
+              
+              marketDropdownList.appendChild(dropdownItem);
+            });
+          });
+          
+          // Add custom styles for the chain headers
+          const styleId = 'chain-dropdown-styles';
+          if (!document.getElementById(styleId)) {
+            const style = document.createElement('style');
+            style.id = styleId;
+            style.textContent = `
+              .chain-header {
+                position: sticky;
+                top: 80px; /* Adjust based on your search box height */
+                z-index: 10;
+              }
+            `;
+            document.head.appendChild(style);
+          }
+          
+          // Set up the dropdown toggle (reuse existing code)
+          marketDropdownButton.addEventListener('click', () => {
+            marketDropdownList.classList.toggle('hidden');
+            // Focus search input when dropdown opens
+            if (!marketDropdownList.classList.contains('hidden')) {
+              setTimeout(() => {
+                const searchInput = document.getElementById('marketSearchInput');
+                if (searchInput) searchInput.focus();
+              }, 100);
+            }
+          });
+          
+          // Set up market search
+          const marketSearchInput = document.getElementById('marketSearchInput');
+          if (marketSearchInput) {
+            marketSearchInput.addEventListener('input', (e) => {
+              const searchTerm = e.target.value.toLowerCase();
+              const marketItems = marketDropdownList.querySelectorAll('div[data-value]');
+              const chainHeaders = marketDropdownList.querySelectorAll('.chain-header');
+              
+              // Create a map to track if any markets are visible for each chain
+              const visibleMarketsPerChain = {};
+              
+              // Check visibility of market items
+              marketItems.forEach(item => {
+                const marketName = item.querySelector('.font-semibold').textContent.toLowerCase();
+                const chainId = item.dataset.chainId;
+                const isVisible = marketName.includes(searchTerm);
+                item.style.display = isVisible ? 'flex' : 'none';
+                
+                // Track visibility for each chain
+                if (isVisible) {
+                  visibleMarketsPerChain[chainId] = true;
+                }
+              });
+              
+              // Show/hide chain headers based on whether they have visible markets
+              chainHeaders.forEach(header => {
+                const nextElement = header.nextElementSibling;
+                if (nextElement && nextElement.dataset && nextElement.dataset.chainId) {
+                  const chainId = nextElement.dataset.chainId;
+                  header.style.display = visibleMarketsPerChain[chainId] ? 'flex' : 'none';
+                }
+              });
+            });
+            
+            // Prevent clicks inside search from closing dropdown
+            marketSearchInput.addEventListener('click', (e) => {
+              e.stopPropagation();
+            });
+          }
+          
+          // Get sort buttons
+          const sortByName = document.getElementById('sortByName');
+          const sortByLiquidity = document.getElementById('sortByLiquidity');
+          const sortByVolume = document.getElementById('sortByVolume');
+          
+          // Function to set active sort button
+          const setActiveSortButton = (activeButton) => {
+            [sortByName, sortByLiquidity, sortByVolume].forEach(btn => {
+              if (btn && btn === activeButton) {
+                btn.classList.add('sort-active');
+                btn.classList.add('text-green-400');
+              } else if (btn) {
+                btn.classList.remove('sort-active');
+                btn.classList.remove('text-green-400');
+              }
+            });
+          };
+          
+          // Override existing event listeners for sorting buttons
+          if (sortByName) {
+            sortByName.replaceWith(sortByName.cloneNode(true));
+            const newSortByName = document.getElementById('sortByName');
+            
+            newSortByName.addEventListener('click', () => {
+              setActiveSortButton(newSortByName);
+              
+              // For each chain section, sort its markets
+              sortedChainIds.forEach(chainId => {
+                const chainItems = Array.from(marketDropdownList.querySelectorAll(`div[data-value][data-chain-id="${chainId}"]`));
+                const sortedItems = chainItems.sort((a, b) => {
+                  const marketA = a.querySelector('.font-semibold').textContent;
+                  const marketB = b.querySelector('.font-semibold').textContent;
+                  return marketA.localeCompare(marketB);
+                });
+                
+                // Find the chain header
+                const chainHeader = Array.from(marketDropdownList.querySelectorAll('.chain-header')).find(header => 
+                  header.textContent.trim().includes(CHAIN_DATA[chainId]?.name || `Chain ${chainId}`)
+                );
+                
+                // Reorder DOM elements after the chain header
+                if (chainHeader) {
+                  let currentElement = chainHeader;
+                  sortedItems.forEach(item => {
+                    // Insert after the current element
+                    currentElement.after(item);
+                    // Update current element to the newly inserted one
+                    currentElement = item;
+                  });
+                }
+              });
+            });
+          }
+          
+          // Sort markets by liquidity
+          if (sortByLiquidity) {
+            sortByLiquidity.replaceWith(sortByLiquidity.cloneNode(true));
+            const newSortByLiquidity = document.getElementById('sortByLiquidity');
+            
+            newSortByLiquidity.addEventListener('click', () => {
+              setActiveSortButton(newSortByLiquidity);
+              
+              // For each chain section, sort its markets
+              sortedChainIds.forEach(chainId => {
+                const chainItems = Array.from(marketDropdownList.querySelectorAll(`div[data-value][data-chain-id="${chainId}"]`));
+                const sortedItems = chainItems.sort((a, b) => {
+                  const marketA = marketsData.find(m => m.address === a.dataset.value);
+                  const marketB = marketsData.find(m => m.address === b.dataset.value);
+                  return (marketB?.totalLiquidity || 0) - (marketA?.totalLiquidity || 0);
+                });
+                
+                // Find the chain header
+                const chainHeader = Array.from(marketDropdownList.querySelectorAll('.chain-header')).find(header => 
+                  header.textContent.trim().includes(CHAIN_DATA[chainId]?.name || `Chain ${chainId}`)
+                );
+                
+                // Reorder DOM elements after the chain header
+                if (chainHeader) {
+                  let currentElement = chainHeader;
+                  sortedItems.forEach(item => {
+                    // Insert after the current element
+                    currentElement.after(item);
+                    // Update current element to the newly inserted one
+                    currentElement = item;
+                  });
+                }
+              });
+            });
+          }
+          
+          // Sort markets by volume
+          if (sortByVolume) {
+            sortByVolume.replaceWith(sortByVolume.cloneNode(true));
+            const newSortByVolume = document.getElementById('sortByVolume');
+            
+            newSortByVolume.addEventListener('click', () => {
+              setActiveSortButton(newSortByVolume);
+              
+              // For each chain section, sort its markets
+              sortedChainIds.forEach(chainId => {
+                const chainItems = Array.from(marketDropdownList.querySelectorAll(`div[data-value][data-chain-id="${chainId}"]`));
+                const sortedItems = chainItems.sort((a, b) => {
+                  const marketA = marketsData.find(m => m.address === a.dataset.value);
+                  const marketB = marketsData.find(m => m.address === b.dataset.value);
+                  return (marketB?.volume24h || 0) - (marketA?.volume24h || 0);
+                });
+                
+                // Find the chain header
+                const chainHeader = Array.from(marketDropdownList.querySelectorAll('.chain-header')).find(header => 
+                  header.textContent.trim().includes(CHAIN_DATA[chainId]?.name || `Chain ${chainId}`)
+                );
+                
+                // Reorder DOM elements after the chain header
+                if (chainHeader) {
+                  let currentElement = chainHeader;
+                  sortedItems.forEach(item => {
+                    // Insert after the current element
+                    currentElement.after(item);
+                    // Update current element to the newly inserted one
+                    currentElement = item;
+                  });
+                }
+              });
+            });
+          }
+          
+          // Initially sort by liquidity
+          if (sortByLiquidity) {
+            setActiveSortButton(sortByLiquidity);
+            
+            // Trigger initial sort
+            sortByLiquidity.click();
+          }
+          
+          // Close dropdown when clicking outside
+          document.addEventListener('click', (event) => {
+            if (!marketDropdownButton.contains(event.target) && !marketDropdownList.contains(event.target)) {
+              marketDropdownList.classList.add('hidden');
+            }
+          });
+          
+          // Trigger change event to load the first market
+          if (marketSelect.options.length > 0 && firstMarketAddress) {
+            console.log("Setting initial market:", firstMarketAddress);
+            marketSelect.value = firstMarketAddress;
+            
+            // Also update the button text
+            if (markets.length > 0) {
+              const firstMarket = markets.find(m => m.address === firstMarketAddress);
+              if (firstMarket) {
+                selectedMarketText.textContent = firstMarket.pairName;
+              }
+            }
+            
+            // Ensure we wait for the market data to be fetched
+            await fetchMarketData(firstMarketAddress);
+            await fetchLiquidityData(firstMarketAddress);
+            renderLiquidityChart();
+            
+            // Explicitly call loadTradePage to ensure all data is loaded correctly
+            await loadTradePage(true);
+            
+            // Set option type to call and update UI
+            document.getElementById("optionType").value = "call";
+            const event = new Event('change');
+            document.getElementById("optionType").dispatchEvent(event);
+            
+            // Set zoom preset
+            setZoomPreset("50");
+          }
+        } catch (error) {
+          console.error('Error fetching markets:', error);
+        }
+      }
+
+      async function fetchMarketData(marketAddress) {
+        try {
+          console.log("Fetching data for market:", marketAddress);
+          
+          // Find the selected market in the stored markets data
+          const market = marketsData.find(m => m.address === marketAddress);
+          console.log("Market found:", market);
+          
+          if (!market) {
+            console.error('Market not found');
+            return;
+          }
+          
+          selectedMarketData = market; // Store the selected market data globally
+          
+          // Fetch strikes data for the selected market
+          console.log(`Fetching strikes for market: chainId=${market.chainId}, address=${market.address}`);
+          const strikesResponse = await fetch(`https://api.stryke.xyz/clamm/strikes-chain?chainId=${market.chainId}&optionMarket=${market.address}&callsReach=1000&putsReach=1000&filterDeprecated=true`);
+          const strikesData = await strikesResponse.json();
+          console.log("Strikes data:", strikesData);
+          
+          // Fetch mark price for the selected market
+          console.log(`Fetching mark price for market: chainId=${market.chainId}, ticker=${market.ticker}`);
+          const markPriceResponse = await fetch(`https://api.stryke.xyz/uniswap-prices/mark-price?chainId=${market.chainId}&ticker=${market.ticker}`);
+          const markPriceData = await markPriceResponse.json();
+          console.log("Mark price data:", markPriceData);
+          
+          // Process each strike
+          const liquidityData = [];
+          const availableLiquidityData = [];
+          
+          strikesData.forEach(strike => {
+            const strikePrice = Object.keys(strike)[0];
+            const strikeData = strike[strikePrice][0];
+            
+            // Add total liquidity data
+            liquidityData.push({
+              x: parseFloat(strikePrice),
+              y: parseFloat(strikeData.totalLiquidity)
+            });
+            
+            // Add available liquidity data
+            availableLiquidityData.push({
+              x: parseFloat(strikePrice),
+              y: parseFloat(strikeData.availableLiquidity)
+            });
+          });
+          
+          // Update UI with market data
+          const marketInfo = {
+            liquidity: market.totalLiquidity,
+            availableLiquidity: market.availableLiquidity,
+            openInterest: market.openInterest,
+            volume24h: market.volume24h,
+            markPrice: markPriceData.markPrice,
+            pairName: market.pairName
+          };
+          
+          console.log("Updating market info with:", marketInfo);
+          updateMarketInfo(marketInfo);
+          
+          // Update charts with both total and available liquidity data
+          updateCharts({
+            liquidityData: liquidityData,
+            availableLiquidityData: availableLiquidityData
+          });
+          
+        } catch (error) {
+          console.error('Error fetching and processing market data:', error);
+        }
+      }
+
+      // Function to update charts with new data
+      function updateCharts(data) {
+        console.log("Updating charts with data:", data);
+        
+        // Update total liquidity chart
+        if (totalLiquidityChartInstance) {
+          console.log("Updating total liquidity chart");
+          totalLiquidityChartInstance.data.datasets[0].data = data.liquidityData;
+          totalLiquidityChartInstance.update();
+        } else {
+          console.log("Total liquidity chart instance not found");
+        }
+        
+        // Update locked liquidity chart
+        if (lockedLiquidityChartInstance) {
+          console.log("Updating locked liquidity chart");
+          // Calculate locked liquidity by subtracting available from total
+          const lockedLiquidityData = data.liquidityData.map(point => ({
+            x: point.x,
+            y: point.y - (data.availableLiquidityData?.find(p => p.x === point.x)?.y || 0)
+          }));
+          lockedLiquidityChartInstance.data.datasets[0].data = lockedLiquidityData;
+          lockedLiquidityChartInstance.update();
+        } else {
+          console.log("Locked liquidity chart instance not found");
+        }
+      }
+
+      // Function to update market info panel
+      function updateMarketInfo(data) {
+        // Update the UI with the market information
+        console.log("Updating UI with market info:", data);
+        
+        // Update the market name
+        const marketNameElement = document.getElementById('marketName');
+        if (marketNameElement) {
+          marketNameElement.textContent = data.pairName;
+        }
+        
+        // Update liquidity
+        const liquidityElement = document.getElementById('totalLiquidity');
+        if (liquidityElement) {
+          liquidityElement.textContent = formatNumber(data.liquidity);
+        }
+        
+        // Update open interest
+        const openInterestElement = document.getElementById('openInterest');
+        if (openInterestElement) {
+          openInterestElement.textContent = formatNumber(data.openInterest);
+        }
+        
+        // Update 24h volume
+        const volume24hElement = document.getElementById('volume24h');
+        if (volume24hElement) {
+          volume24hElement.textContent = formatNumber(data.volume24h);
+        }
+        
+        // Update mark price
+        const markPriceElement = document.getElementById('markPrice');
+        if (markPriceElement) {
+          markPriceElement.textContent = formatNumber(data.markPrice);
+        }
+      }
+
+      // Close dropdown when clicking outside
+      document.addEventListener('click', (event) => {
+        if (!marketDropdownButton.contains(event.target) && !marketDropdownList.contains(event.target)) {
+          marketDropdownList.classList.add('hidden');
+        }
+      });
     </script>
   </body>
 </html>
