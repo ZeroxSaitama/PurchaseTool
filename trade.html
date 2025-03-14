@@ -1079,12 +1079,266 @@
       const draggableRangePlugin = {
         id: "draggableRangePlugin",
         draggingSelector: null,
-        afterInit(chart) {
-          const canvas = chart.canvas;
-          canvas.addEventListener("mousedown", (e) => this.handleMouseDown(e, chart));
-          canvas.addEventListener("mousemove", (e) => this.handleMouseMove(e, chart));
-          canvas.addEventListener("mouseup", (e) => this.handleMouseUp(e, chart));
-          canvas.addEventListener("mouseleave", (e) => this.handleMouseUp(e, chart));
+        initialDragDistance: 0,
+        lastX: 0,
+        afterInit(chart, options) {
+          // Add mouse event listeners
+          chart.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e, chart));
+          chart.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e, chart));
+          chart.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e, chart));
+          chart.canvas.addEventListener('mouseleave', (e) => this.handleMouseUp(e, chart));
+          
+          // Add global mouseup handler to ensure release even if outside canvas
+          window.addEventListener('mouseup', () => this.handleMouseUp(null, chart));
+          
+          // Initial state
+          this.draggingSelector = null;
+          this.initialDragDistance = 0;
+        },
+        updateCursorStyle(x, chart) {
+          if (!this.draggingSelector) {
+            const callMin = parseFloat(document.getElementById("callMinInput").value) || spotPriceGlobal;
+            const callMax = parseFloat(document.getElementById("callMaxInput").value) || (spotPriceGlobal * 1.05);
+            const putMin = parseFloat(document.getElementById("putMinInput").value) || (spotPriceGlobal * 0.95);
+            const putMax = parseFloat(document.getElementById("putMaxInput").value) || spotPriceGlobal;
+            
+            const xScale = chart.scales.x;
+            const callMinPixel = xScale.getPixelForValue(callMin);
+            const callMaxPixel = xScale.getPixelForValue(callMax);
+            const putMinPixel = xScale.getPixelForValue(putMin);
+            const putMaxPixel = xScale.getPixelForValue(putMax);
+            
+            const threshold = 10; // pixels
+            
+            // Check if mouse is near a selector
+            if (Math.abs(x - callMinPixel) < threshold || Math.abs(x - callMaxPixel) < threshold ||
+                Math.abs(x - putMinPixel) < threshold || Math.abs(x - putMaxPixel) < threshold) {
+              chart.canvas.style.cursor = 'ew-resize';
+            } 
+            // Check if mouse is between selectors
+            else if ((x > callMinPixel && x < callMaxPixel) || (x > putMinPixel && x < putMaxPixel)) {
+              chart.canvas.style.cursor = 'grab';
+            }
+            else {
+              chart.canvas.style.cursor = 'default';
+            }
+          } else if (this.draggingSelector === "callBoth" || this.draggingSelector === "putBoth") {
+            chart.canvas.style.cursor = 'grabbing';
+          }
+        },
+        handleMouseDown(e, chart) {
+          // Get mouse coordinates
+          const rect = chart.canvas.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          
+          // Get current selector values in pixels
+          const xScale = chart.scales.x;
+          const callMin = parseFloat(document.getElementById("callMinInput").value) || spotPriceGlobal;
+          const callMax = parseFloat(document.getElementById("callMaxInput").value) || (spotPriceGlobal * 1.05);
+          const putMin = parseFloat(document.getElementById("putMinInput").value) || (spotPriceGlobal * 0.95);
+          const putMax = parseFloat(document.getElementById("putMaxInput").value) || spotPriceGlobal;
+          
+          const callMinPixel = xScale.getPixelForValue(callMin);
+          const callMaxPixel = xScale.getPixelForValue(callMax);
+          const putMinPixel = xScale.getPixelForValue(putMin);
+          const putMaxPixel = xScale.getPixelForValue(putMax);
+          
+          const threshold = 10; // pixels
+          
+          // Check if click is near a selector
+          if (Math.abs(x - callMinPixel) < threshold) {
+            this.draggingSelector = "callMin";
+            chart.canvas.style.cursor = 'ew-resize';
+          } else if (Math.abs(x - callMaxPixel) < threshold) {
+            this.draggingSelector = "callMax";
+            chart.canvas.style.cursor = 'ew-resize';
+          } else if (Math.abs(x - putMinPixel) < threshold) {
+            this.draggingSelector = "putMin";
+            chart.canvas.style.cursor = 'ew-resize';
+          } else if (Math.abs(x - putMaxPixel) < threshold) {
+            this.draggingSelector = "putMax";
+            chart.canvas.style.cursor = 'ew-resize';
+          } 
+          // Check if click is between selectors (for dragging both)
+          else if (x > callMinPixel && x < callMaxPixel) {
+            this.draggingSelector = "callBoth";
+            chart.canvas.style.cursor = 'grabbing';
+            
+            // Store the width of the selection and offsets from mouse to edges
+            this.callMinOffset = x - callMinPixel;
+            this.callMaxOffset = callMaxPixel - x;
+          } else if (x > putMinPixel && x < putMaxPixel) {
+            this.draggingSelector = "putBoth";
+            chart.canvas.style.cursor = 'grabbing';
+            
+            // Store the width of the selection and offsets from mouse to edges
+            this.putMinOffset = x - putMinPixel;
+            this.putMaxOffset = putMaxPixel - x;
+          }
+        },
+        handleMouseMove(e, chart) {
+          // Get mouse coordinates
+          const rect = chart.canvas.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          
+          // Update cursor style if not dragging
+          if (!this.draggingSelector) {
+            this.updateCursorStyle(x, chart);
+            return;
+          }
+          
+          const xScale = chart.scales.x;
+          const xVal = xScale.getValueForPixel(x);
+          
+          // Set newVal based on position
+          let newVal = Math.round(xVal * 10000) / 10000;
+          
+          // Handle different selectors
+          if (this.draggingSelector === "callMin") {
+            // Add constraint: call min cannot go below mark price
+            newVal = Math.max(newVal, spotPriceGlobal);
+            const currentCallMax = parseFloat(document.getElementById("callMaxInput").value) || (spotPriceGlobal * 1.05);
+            newVal = Math.min(newVal, currentCallMax - 0.0001);
+            document.getElementById("callMinInput").value = newVal.toFixed(4);
+            
+            // Force chart update immediately without heavy calculations
+            chart.update('none');
+            
+            // Update colors only when dragging a call selector
+            updateChartColors();
+            
+            // Update available liquidity display
+            const callMin = parseFloat(document.getElementById("callMinInput").value) || spotPriceGlobal;
+            const callMax = parseFloat(document.getElementById("callMaxInput").value) || spotPriceGlobal;
+            const availableLiquidity = calculateAvailableLiquidity(callMin, callMax, spotPriceGlobal);
+            document.getElementById("callAvailableLiquidity").textContent = `Available: $${availableLiquidity.toFixed(2)}`;
+          }
+          else if (this.draggingSelector === "callMax") {
+            const currentCallMin = parseFloat(document.getElementById("callMinInput").value) || spotPriceGlobal;
+            newVal = Math.max(newVal, currentCallMin + 0.0001);
+            document.getElementById("callMaxInput").value = newVal.toFixed(4);
+            
+            // Force chart update immediately without heavy calculations
+            chart.update('none');
+            
+            // Update colors only when dragging a call selector
+            updateChartColors();
+            
+            // Update available liquidity display
+            const callMin = parseFloat(document.getElementById("callMinInput").value) || spotPriceGlobal;
+            const callMax = parseFloat(document.getElementById("callMaxInput").value) || spotPriceGlobal;
+            const availableLiquidity = calculateAvailableLiquidity(callMin, callMax, spotPriceGlobal);
+            document.getElementById("callAvailableLiquidity").textContent = `Available: $${availableLiquidity.toFixed(2)}`;
+          }
+          else if (this.draggingSelector === "callBoth") {
+            // Calculate new positions directly based on mouse position and stored offsets
+            const callMinPixel = x - this.callMinOffset;
+            const callMaxPixel = x + this.callMaxOffset;
+            
+            // Convert pixels to values
+            let callMin = xScale.getValueForPixel(callMinPixel);
+            let callMax = xScale.getValueForPixel(callMaxPixel);
+            
+            // Apply constraints: call min cannot go below mark price
+            if (callMin < spotPriceGlobal) {
+              // Calculate the pixel adjustment needed
+              const newCallMinPixel = xScale.getPixelForValue(spotPriceGlobal);
+              const pixelAdjustment = newCallMinPixel - callMinPixel;
+              
+              // Adjust both pixels
+              callMin = spotPriceGlobal;
+              callMax = xScale.getValueForPixel(callMaxPixel + pixelAdjustment);
+            }
+            
+            // Update inputs
+            document.getElementById("callMinInput").value = callMin.toFixed(4);
+            document.getElementById("callMaxInput").value = callMax.toFixed(4);
+            
+            // Force chart update
+            chart.update('none');
+            
+            // Update colors during drag to show real-time changes
+            updateChartColors();
+            
+            // Update available liquidity display
+            const availableLiquidity = calculateAvailableLiquidity(callMin, callMax, spotPriceGlobal);
+            document.getElementById("callAvailableLiquidity").textContent = `Available: $${availableLiquidity.toFixed(2)}`;
+          }
+          else if (this.draggingSelector === "putMax") {
+            // Add constraint: put max cannot go above mark price
+            newVal = Math.min(newVal, spotPriceGlobal);
+            const currentPutMin = parseFloat(document.getElementById("putMinInput").value) || (spotPriceGlobal * 0.95);
+            newVal = Math.max(newVal, currentPutMin + 0.0001);
+            document.getElementById("putMaxInput").value = newVal.toFixed(4);
+            
+            // Force chart update immediately without heavy calculations
+            chart.update('none');
+            
+            // Update colors during drag to show real-time changes
+            updateChartColors();
+          }
+          else if (this.draggingSelector === "putMin") {
+            const currentPutMax = parseFloat(document.getElementById("putMaxInput").value) || spotPriceGlobal;
+            newVal = Math.min(newVal, currentPutMax - 0.0001);
+            document.getElementById("putMinInput").value = newVal.toFixed(4);
+            
+            // Force chart update immediately without heavy calculations
+            chart.update('none');
+            
+            // Update colors during drag to show real-time changes
+            updateChartColors();
+          }
+          else if (this.draggingSelector === "putBoth") {
+            // Calculate new positions directly based on mouse position and stored offsets
+            const putMinPixel = x - this.putMinOffset;
+            const putMaxPixel = x + this.putMaxOffset;
+            
+            // Convert pixels to values
+            let putMin = xScale.getValueForPixel(putMinPixel);
+            let putMax = xScale.getValueForPixel(putMaxPixel);
+            
+            // Apply constraints: put max cannot go above mark price
+            if (putMax > spotPriceGlobal) {
+              // Calculate the pixel adjustment needed
+              const newPutMaxPixel = xScale.getPixelForValue(spotPriceGlobal);
+              const pixelAdjustment = putMaxPixel - newPutMaxPixel;
+              
+              // Adjust both pixels
+              putMax = spotPriceGlobal;
+              putMin = xScale.getValueForPixel(putMinPixel - pixelAdjustment);
+            }
+            
+            // Update inputs
+            document.getElementById("putMinInput").value = putMin.toFixed(4);
+            document.getElementById("putMaxInput").value = putMax.toFixed(4);
+            
+            // Force chart update
+            chart.update('none');
+            
+            // Update colors during drag to show real-time changes
+            updateChartColors();
+          }
+        },
+        handleMouseUp(e, chart) {
+          // Save current selector before resetting
+          const currentSelector = this.draggingSelector;
+          
+          // Reset dragging state immediately
+          this.draggingSelector = null;
+          chart.canvas.style.cursor = 'default';
+          
+          // Final update when mouse is released
+          chart.update();
+          
+          // We no longer need a separate update for put selectors
+          // since we're already updating during mouse movement
+          // if (currentSelector === "putMin" || currentSelector === "putMax" || currentSelector === "putBoth") {
+          //   updateChartColors();
+          // }
+        },
+        getRelativePosition(e, chart) {
+          const rect = chart.canvas.getBoundingClientRect();
+          return { x: e.clientX - rect.left, y: e.clientY - rect.top };
         },
         afterDraw(chart) {
           if (!chart.scales.x) return;
@@ -1232,76 +1486,6 @@
             ctx.fillText("$" + formatNumber(selectedPutLiquidity) + " / $" + formatNumber(putLiquidity), midPutX, chartArea.top + 14);
           }
           ctx.restore();
-        },
-        handleMouseDown(e, chart) {
-          const pos = this.getRelativePosition(e, chart);
-          const xScale = chart.scales.x;
-          const threshold = 6;
-          const optType = document.getElementById("optionType").value;
-          if (optType === "call" || optType === "strangle") {
-            const callMin = parseFloat(document.getElementById("callMinInput").value) || spotPriceGlobal;
-            const callMax = parseFloat(document.getElementById("callMaxInput").value) || (spotPriceGlobal * 1.05);
-            const callMinX = xScale.getPixelForValue(callMin);
-            const callMaxX = xScale.getPixelForValue(callMax);
-            if (Math.abs(pos.x - callMinX) < threshold) { this.draggingSelector = "callMin"; return; }
-            if (Math.abs(pos.x - callMaxX) < threshold) { this.draggingSelector = "callMax"; return; }
-          }
-          if (optType === "put" || optType === "strangle") {
-            const putMax = parseFloat(document.getElementById("putMaxInput").value) || spotPriceGlobal;
-            const putMin = parseFloat(document.getElementById("putMinInput").value) || (spotPriceGlobal * 0.95);
-            const putMaxX = xScale.getPixelForValue(putMax);
-            const putMinX = xScale.getPixelForValue(putMin);
-            if (Math.abs(pos.x - putMaxX) < threshold) { this.draggingSelector = "putMax"; return; }
-            if (Math.abs(pos.x - putMinX) < threshold) { this.draggingSelector = "putMin"; return; }
-          }
-        },
-        handleMouseMove(e, chart) {
-          if (!this.draggingSelector) return;
-          const pos = this.getRelativePosition(e, chart);
-          const xScale = chart.scales.x;
-          let newVal = xScale.getValueForPixel(pos.x);
-          newVal = Math.round(newVal * 10000) / 10000;
-          const optType = document.getElementById("optionType").value;
-          if (this.draggingSelector === "callMin") {
-            // Add constraint: call min cannot go below mark price
-            newVal = Math.max(newVal, spotPriceGlobal);
-            const currentCallMax = parseFloat(document.getElementById("callMaxInput").value) || (spotPriceGlobal * 1.05);
-            newVal = Math.min(newVal, currentCallMax - 0.0001);
-            document.getElementById("callMinInput").value = newVal.toFixed(4);
-          }
-          if (this.draggingSelector === "callMax") {
-            const currentCallMin = parseFloat(document.getElementById("callMinInput").value) || spotPriceGlobal;
-            newVal = Math.max(newVal, currentCallMin + 0.0001);
-            document.getElementById("callMaxInput").value = newVal.toFixed(4);
-          }
-          if (this.draggingSelector === "putMax") {
-            // Add constraint: put max cannot go above mark price
-            newVal = Math.min(newVal, spotPriceGlobal);
-            const currentPutMin = parseFloat(document.getElementById("putMinInput").value) || (spotPriceGlobal * 0.95);
-            newVal = Math.max(newVal, currentPutMin + 0.0001);
-            document.getElementById("putMaxInput").value = newVal.toFixed(4);
-          }
-          if (this.draggingSelector === "putMin") {
-            const currentPutMax = parseFloat(document.getElementById("putMaxInput").value) || spotPriceGlobal;
-            newVal = Math.min(newVal, currentPutMax - 0.0001);
-            document.getElementById("putMinInput").value = newVal.toFixed(4);
-          }
-          
-          // Update the available liquidity text and chart colors as the selectors are dragged
-          updateChartColors();
-          
-          chart.update("none");
-        },
-        handleMouseUp(e, chart) {
-          if (this.draggingSelector) {
-            // Final update of chart colors after the drag is complete
-            updateChartColors();
-          }
-          this.draggingSelector = null;
-        },
-        getRelativePosition(e, chart) {
-          const rect = chart.canvas.getBoundingClientRect();
-          return { x: e.clientX - rect.left, y: e.clientY - rect.top };
         }
       };
       
@@ -1521,8 +1705,9 @@
             }
           }
           
-          document.getElementById("putLiquidityDisplay").innerText =
-            slider + "% ($" + formatNumber(target) + " / $" + formatNumber(total) + ")";
+          // Remove reference to non-existent element
+          // document.getElementById("putLiquidityDisplay").innerText =
+          //  slider + "% ($" + formatNumber(target) + " / $" + formatNumber(total) + ")";
         } else if (optionType === "strangle") {
           // Call side (fills left to right)
           const callMin = parseFloat(document.getElementById("callMinInput").value) || spotPriceGlobal;
@@ -1584,10 +1769,23 @@
               }
             }
           
-          document.getElementById("callLiquidityDisplay").innerText =
-            callSlider + "% ($" + formatNumber(callTarget) + " / $" + formatNumber(callTotal) + ")";
-          document.getElementById("putLiquidityDisplay").innerText =
-            putSlider + "% ($" + formatNumber(putTarget) + " / $" + formatNumber(putTotal) + ")";
+          // Remove references to non-existent elements
+          // document.getElementById("callLiquidityDisplay").innerText =
+          //  callSlider + "% ($" + formatNumber(callTarget) + " / $" + formatNumber(callTotal) + ")";
+          // document.getElementById("putLiquidityDisplay").innerText =
+          //  putSlider + "% ($" + formatNumber(putTarget) + " / $" + formatNumber(putTotal) + ")";
+          
+          // Update the available liquidity displays for strangle
+          document.getElementById("callAvailableLiquidity").textContent = `Available: $${formatNumber(callTotal)}`;
+          document.getElementById("putAvailableLiquidity").textContent = `Available: $${formatNumber(putTotal)}`;
+          
+          // Update the amount input fields if they don't have focus
+          if (document.activeElement !== document.getElementById("callAmountInput")) {
+            document.getElementById("callAmountInput").value = formatNumberForInput(callTarget);
+          }
+          if (document.activeElement !== document.getElementById("putAmountInput")) {
+            document.getElementById("putAmountInput").value = formatNumberForInput(putTarget);
+          }
         }
         
         // Make sure we have data to update the chart with
@@ -2426,13 +2624,25 @@
         updateTopPanelView();
       });
       
+      // Find and update the slider event listeners
       document.getElementById("tradeAmountCall").addEventListener("input", (e) => {
         // We'll update display via updateChartColors for consistency
         updateChartColors();
+        
+        // Force chart update to ensure colors change
+        if (totalLiquidityChartInstance) {
+          totalLiquidityChartInstance.update();
+        }
       });
+      
       document.getElementById("tradeAmountPut").addEventListener("input", (e) => {
         // We'll update display via updateChartColors for consistency
         updateChartColors();
+        
+        // Force chart update to ensure colors change
+        if (totalLiquidityChartInstance) {
+          totalLiquidityChartInstance.update();
+        }
       });
       
       /******************************************************
@@ -2588,6 +2798,10 @@
             tick.tokenSymbol.toLowerCase().includes("usdc")
           ).reduce((sum, tick) => sum + tick.availableLiquidity, 0);
           availableLiquidity = Math.min(callLiquidity, putLiquidity);
+          
+          // Update both the call and put available liquidity displays for strangle
+          document.getElementById("callAvailableLiquidity").textContent = `Available: $${formatNumber(availableLiquidity)}`;
+          document.getElementById("putAvailableLiquidity").textContent = `Available: $${formatNumber(availableLiquidity)}`;
         }
         
         let tradeAmount = 0;
